@@ -38,6 +38,7 @@ class UserProfile(Base):
         primary_key=True,
     )
     interface_lang: Mapped[str] = mapped_column(String(2))
+    theme: Mapped[str] = mapped_column(String(8), default="light")
     native_lang: Mapped[str] = mapped_column(String(2))
     target_lang: Mapped[str] = mapped_column(String(2))
     avatar_url: Mapped[str | None] = mapped_column(Text, nullable=True)

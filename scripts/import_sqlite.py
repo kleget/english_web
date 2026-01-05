@@ -5,12 +5,13 @@ from __future__ import annotations
 import argparse
 import asyncio
 import json
+import re
 import sqlite3
 import sys
 from pathlib import Path
 from typing import Iterable
 
-from sqlalchemy import select
+from sqlalchemy import delete, select
 from sqlalchemy.dialects.postgresql import insert
 
 BASE_DIR = Path(__file__).resolve().parents[1]
@@ -21,6 +22,23 @@ from app.db.session import AsyncSessionLocal  # noqa: E402
 from app.models import Corpus, CorpusWordStat, Translation, Word  # noqa: E402
 
 SKIP_FILES = {"translations_cache.db", "delete.db"}
+LATIN_RE = re.compile(r"[A-Za-z]")
+CYRILLIC_RE = re.compile(r"[\u0400-\u04FF]")
+LANGS = {"ru", "en"}
+
+
+def detect_lang(text: str) -> str | None:
+    if not text:
+        return None
+    latin = len(LATIN_RE.findall(text))
+    cyrillic = len(CYRILLIC_RE.findall(text))
+    if latin == 0 and cyrillic == 0:
+        return None
+    if latin > cyrillic:
+        return "en"
+    if cyrillic > latin:
+        return "ru"
+    return None
 
 
 def chunked(items: Iterable, size: int) -> Iterable[list]:
@@ -155,6 +173,37 @@ async def upsert_translations(
         await session.execute(stmt)
 
 
+def build_pairs(
+    rows: list[tuple[str, int, str]],
+    fallback_pair: tuple[str, str] | None,
+) -> tuple[list[tuple[str, str, int]], int]:
+    pairs: list[tuple[str, str, int]] = []
+    unknown = 0
+    for word, count, translation in rows:
+        left = str(word).strip()
+        right = str(translation).strip()
+        if not left or not right:
+            continue
+        source_lang = detect_lang(left)
+        target_lang = detect_lang(right)
+        if source_lang in LANGS and target_lang in LANGS and source_lang != target_lang:
+            if source_lang == "ru":
+                pairs.append((left, right, count))
+            else:
+                pairs.append((right, left, count))
+            continue
+
+        unknown += 1
+        if not fallback_pair:
+            continue
+        fallback_source, fallback_target = fallback_pair
+        if fallback_source == "ru" and fallback_target == "en":
+            pairs.append((left, right, count))
+        elif fallback_source == "en" and fallback_target == "ru":
+            pairs.append((right, left, count))
+    return pairs, unknown
+
+
 async def import_database(db_path: Path, mapping: dict) -> None:
     slug = db_path.stem
     if slug not in mapping:
@@ -163,8 +212,9 @@ async def import_database(db_path: Path, mapping: dict) -> None:
 
     meta = mapping[slug]
     name = meta.get("name", slug)
-    source_lang = meta.get("source_lang", "en")
-    target_lang = meta.get("target_lang", "ru")
+    fallback_source = meta.get("source_lang", "en")
+    fallback_target = meta.get("target_lang", "ru")
+    fallback_pair = (fallback_source, fallback_target)
 
     conn = sqlite3.connect(db_path)
     try:
@@ -178,26 +228,68 @@ async def import_database(db_path: Path, mapping: dict) -> None:
             print(f"Skip {slug}: empty translations table")
             return
 
-        translations_sorted = sorted(translations, key=lambda item: item[1], reverse=True)
-        word_counts = [(word, count) for word, count, _translation in translations_sorted]
-        lemmas = [word for word, _count, _translation in translations_sorted]
+        pairs, unknown = build_pairs(translations, fallback_pair)
+        if not pairs:
+            print(f"Skip {slug}: no ru/en pairs found")
+            return
+
+        ru_counts: dict[str, int] = {}
+        en_counts: dict[str, int] = {}
+        ru_lemmas: set[str] = set()
+        en_lemmas: set[str] = set()
+        for ru_word, en_word, count in pairs:
+            ru_lemmas.add(ru_word)
+            en_lemmas.add(en_word)
+            ru_counts[ru_word] = max(ru_counts.get(ru_word, 0), count)
+            en_counts[en_word] = max(en_counts.get(en_word, 0), count)
+
+        ru_word_counts = sorted(ru_counts.items(), key=lambda item: (-item[1], item[0]))
+        en_word_counts = sorted(en_counts.items(), key=lambda item: (-item[1], item[0]))
+
+        ru_translations = {(ru_word, en_word) for ru_word, en_word, _count in pairs}
+        en_translations = {(en_word, ru_word) for ru_word, en_word, _count in pairs}
 
         async with AsyncSessionLocal() as session:
-            corpus_id = await ensure_corpus(session, slug, name, source_lang, target_lang)
-            await session.commit()
+            for source_lang, target_lang, lemmas_set, word_counts, pair_set in (
+                ("ru", "en", ru_lemmas, ru_word_counts, ru_translations),
+                ("en", "ru", en_lemmas, en_word_counts, en_translations),
+            ):
+                if not lemmas_set:
+                    continue
+                if (source_lang, target_lang) == fallback_pair:
+                    pair_slug = slug
+                else:
+                    pair_slug = f"{slug}_{source_lang}_{target_lang}"
 
-            await ensure_words(session, lemmas, source_lang)
-            await session.commit()
+                lemmas = sorted(lemmas_set)
+                translations_rows = [
+                    (lemma, 0, translation) for lemma, translation in sorted(pair_set)
+                ]
 
-            word_id_map = await fetch_word_ids(session, lemmas, source_lang)
+                corpus_id = await ensure_corpus(session, pair_slug, name, source_lang, target_lang)
+                await session.commit()
 
-            await upsert_corpus_stats(session, corpus_id, word_counts, word_id_map)
-            await session.commit()
+                await ensure_words(session, lemmas, source_lang)
+                await session.commit()
 
-            await upsert_translations(session, translations_sorted, word_id_map, target_lang)
-            await session.commit()
+                word_id_map = await fetch_word_ids(session, lemmas, source_lang)
 
-        print(f"Imported {slug}: {len(word_counts)} words, {len(translations_sorted)} translations")
+                await session.execute(
+                    delete(CorpusWordStat).where(CorpusWordStat.corpus_id == corpus_id)
+                )
+                await session.commit()
+
+                await upsert_corpus_stats(session, corpus_id, word_counts, word_id_map)
+                await session.commit()
+
+                await upsert_translations(session, translations_rows, word_id_map, target_lang)
+                await session.commit()
+
+                print(
+                    f"Imported {pair_slug}: {len(word_counts)} words, {len(translations_rows)} translations"
+                )
+        if unknown:
+            print(f"Note {slug}: {unknown} rows with unknown language direction")
     finally:
         conn.close()
 

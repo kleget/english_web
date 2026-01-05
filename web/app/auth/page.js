@@ -2,6 +2,9 @@
 
 import { useState } from "react";
 
+import { setCookie } from "../lib/client-cookies";
+import { useUiLang } from "../ui-lang-context";
+
 const API_BASE = process.env.NEXT_PUBLIC_API_BASE || "http://localhost:8000";
 
 async function postJson(path, payload) {
@@ -22,15 +25,12 @@ async function postJson(path, payload) {
   return response.json();
 }
 
-function setCookie(name, value) {
-  document.cookie = `${name}=${value}; path=/`;
-}
-
 export default function AuthPage() {
   const [mode, setMode] = useState("login");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [interfaceLang, setInterfaceLang] = useState("ru");
+  const { lang, setLang } = useUiLang();
+  const interfaceLang = lang || "ru";
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
@@ -43,7 +43,7 @@ export default function AuthPage() {
       const path = mode === "login" ? "/auth/login" : "/auth/register";
       const data = await postJson(path, payload);
       setCookie("token", data.access_token);
-      setCookie("ui_lang", interfaceLang);
+      setLang(interfaceLang);
       window.location.href = "/";
     } catch (err) {
       setError(err.message || "Auth failed. Check credentials.");
@@ -78,7 +78,7 @@ export default function AuthPage() {
         </div>
         <div>
           <label>Interface language</label>
-          <select value={interfaceLang} onChange={(event) => setInterfaceLang(event.target.value)}>
+          <select value={interfaceLang} onChange={(event) => setLang(event.target.value)}>
             <option value="ru">ru</option>
             <option value="en">en</option>
           </select>

@@ -62,7 +62,7 @@ async def register(data: RegisterRequest, db: AsyncSession = Depends(get_db)) ->
     db.add(user)
     await db.flush()
 
-    profile = UserProfile(user_id=user.id, interface_lang=interface_lang)
+    profile = UserProfile(user_id=user.id, interface_lang=interface_lang, theme="light")
     settings = UserSettings(user_id=user.id)
     db.add_all([profile, settings])
     await db.commit()
@@ -88,7 +88,7 @@ async def login(data: LoginRequest, db: AsyncSession = Depends(get_db)) -> Token
         if profile:
             profile.interface_lang = interface_lang
         else:
-            db.add(UserProfile(user_id=user.id, interface_lang=interface_lang))
+            db.add(UserProfile(user_id=user.id, interface_lang=interface_lang, theme="light"))
 
     settings_result = await db.execute(select(UserSettings).where(UserSettings.user_id == user.id))
     if settings_result.scalar_one_or_none() is None:
@@ -111,6 +111,7 @@ async def me(
         id=str(user.id),
         email=user.email,
         interface_lang=profile.interface_lang if profile else None,
+        theme=profile.theme if profile else None,
         native_lang=profile.native_lang if profile else None,
         target_lang=profile.target_lang if profile else None,
         onboarding_done=profile.onboarding_done if profile else None,
