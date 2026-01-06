@@ -8,11 +8,12 @@ from sqlalchemy import delete, func, select
 from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.api.auth import get_current_user
+from app.api.auth import get_active_learning_profile, get_current_user
 from app.db.session import get_db
 from app.models import (
     Corpus,
     CorpusWordStat,
+    LearningProfile,
     User,
     UserCorpus,
     UserProfile,
@@ -78,18 +79,22 @@ async def get_onboarding_state(
     user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ) -> OnboardingStateOut:
-    profile_result = await db.execute(select(UserProfile).where(UserProfile.user_id == user.id))
-    profile = profile_result.scalar_one_or_none()
-
-    settings_result = await db.execute(select(UserSettings).where(UserSettings.user_id == user.id))
-    settings = settings_result.scalar_one_or_none()
-
-    corpora_result = await db.execute(select(UserCorpus).where(UserCorpus.user_id == user.id))
-    corpora = corpora_result.scalars().all()
+    learning_profile = await get_active_learning_profile(user.id, db, require_onboarding=False)
+    settings = None
+    corpora = []
+    if learning_profile is not None:
+        settings_result = await db.execute(
+            select(UserSettings).where(UserSettings.profile_id == learning_profile.id)
+        )
+        settings = settings_result.scalar_one_or_none()
+        corpora_result = await db.execute(
+            select(UserCorpus).where(UserCorpus.profile_id == learning_profile.id)
+        )
+        corpora = corpora_result.scalars().all()
 
     return OnboardingStateOut(
-        native_lang=profile.native_lang if profile else None,
-        target_lang=profile.target_lang if profile else None,
+        native_lang=learning_profile.native_lang if learning_profile else None,
+        target_lang=learning_profile.target_lang if learning_profile else None,
         daily_new_words=settings.daily_new_words if settings else 5,
         daily_review_words=settings.daily_review_words if settings else 10,
         learn_batch_size=settings.learn_batch_size if settings else 5,
@@ -101,7 +106,7 @@ async def get_onboarding_state(
             )
             for item in corpora
         ],
-        onboarding_done=profile.onboarding_done if profile else False,
+        onboarding_done=learning_profile.onboarding_done if learning_profile else False,
     )
 
 
@@ -250,29 +255,54 @@ async def apply_onboarding(
             )
 
     profile_result = await db.execute(select(UserProfile).where(UserProfile.user_id == user.id))
-    profile = profile_result.scalar_one_or_none()
-    if profile is None:
-        profile = UserProfile(user_id=user.id, interface_lang="ru", theme="light")
-        db.add(profile)
-    profile.native_lang = native_lang
-    profile.target_lang = target_lang
-    profile.onboarding_done = True
+    user_profile = profile_result.scalar_one_or_none()
+    if user_profile is None:
+        user_profile = UserProfile(user_id=user.id, interface_lang="ru", theme="light")
+        db.add(user_profile)
 
-    settings_result = await db.execute(select(UserSettings).where(UserSettings.user_id == user.id))
+    lp_result = await db.execute(
+        select(LearningProfile).where(
+            LearningProfile.user_id == user.id,
+            LearningProfile.native_lang == native_lang,
+            LearningProfile.target_lang == target_lang,
+        )
+    )
+    learning_profile = lp_result.scalar_one_or_none()
+    if learning_profile is None:
+        learning_profile = LearningProfile(
+            user_id=user.id,
+            native_lang=native_lang,
+            target_lang=target_lang,
+            onboarding_done=True,
+        )
+        db.add(learning_profile)
+        await db.flush()
+    else:
+        learning_profile.onboarding_done = True
+
+    user_profile.active_profile_id = learning_profile.id
+    user_profile.native_lang = native_lang
+    user_profile.target_lang = target_lang
+    user_profile.onboarding_done = True
+
+    settings_result = await db.execute(
+        select(UserSettings).where(UserSettings.profile_id == learning_profile.id)
+    )
     settings = settings_result.scalar_one_or_none()
     if settings is None:
-        settings = UserSettings(user_id=user.id)
+        settings = UserSettings(profile_id=learning_profile.id, user_id=user.id)
         db.add(settings)
     settings.daily_new_words = data.daily_new_words
     settings.daily_review_words = data.daily_review_words
     settings.learn_batch_size = data.learn_batch_size
 
-    await db.execute(delete(UserCorpus).where(UserCorpus.user_id == user.id))
+    await db.execute(delete(UserCorpus).where(UserCorpus.profile_id == learning_profile.id))
     for item in data.corpora:
         if item.target_word_limit < 0:
             raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid target_word_limit")
         db.add(
             UserCorpus(
+                profile_id=learning_profile.id,
                 user_id=user.id,
                 corpus_id=item.corpus_id,
                 target_word_limit=item.target_word_limit,
@@ -290,10 +320,7 @@ async def import_known_words(
     user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ) -> KnownWordsImportOut:
-    profile_result = await db.execute(select(UserProfile).where(UserProfile.user_id == user.id))
-    profile = profile_result.scalar_one_or_none()
-    if profile is None or not profile.native_lang or not profile.target_lang:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Complete onboarding first")
+    profile = await get_active_learning_profile(user.id, db, require_onboarding=True)
 
     entries, total_lines, invalid_lines = parse_known_words(data.text)
     if not entries:
@@ -311,6 +338,7 @@ async def import_known_words(
     now = datetime.now(timezone.utc)
     rows = [
         {
+            "profile_id": profile.id,
             "user_id": user.id,
             "word_id": word_id,
             "status": "known",
@@ -323,7 +351,7 @@ async def import_known_words(
     inserted = 0
     if rows:
         stmt = insert(UserWord).values(rows)
-        stmt = stmt.on_conflict_do_nothing(index_elements=["user_id", "word_id"])
+        stmt = stmt.on_conflict_do_nothing(index_elements=["profile_id", "word_id"])
         result = await db.execute(stmt)
         inserted = result.rowcount or 0
         await db.commit()

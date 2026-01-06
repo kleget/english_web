@@ -119,6 +119,7 @@ export default function LearnPage() {
   const [result, setResult] = useState(null);
   const [checkMap, setCheckMap] = useState({});
   const [correctMap, setCorrectMap] = useState({});
+  const [reading, setReading] = useState(null);
   const [phase, setPhase] = useState("cards");
   const [readingLeft, setReadingLeft] = useState(READ_SECONDS);
   const [cardIndex, setCardIndex] = useState(0);
@@ -139,6 +140,7 @@ export default function LearnPage() {
       const data = await postJson("/study/learn/start", {}, token);
       setWords(data.words || []);
       setSessionId(data.session_id);
+      setReading(data.reading || null);
       const initialAnswers = {};
       (data.words || []).forEach((item) => {
         initialAnswers[item.word_id] = "";
@@ -279,6 +281,10 @@ export default function LearnPage() {
   const progressPercent = cardsTotal > 0 ? Math.round((cardsDone / cardsTotal) * 100) : 0;
   const cardsFinished = cardsTotal > 0 && cardIndex >= cardsTotal;
   const currentCard = cardIndex < cardsTotal ? words[cardIndex] : null;
+  const readingTitle = reading?.title || t.readingTitle;
+  const readingText = reading?.text || t.readingText;
+  const readingMetaLabel = uiLang === "en" ? "Domain" : "Сфера";
+  const readingMeta = reading?.corpus_name ? `${readingMetaLabel}: ${reading.corpus_name}` : "";
 
   return (
     <main>
@@ -387,8 +393,9 @@ export default function LearnPage() {
 
           {phase === "reading" ? (
             <div className="panel reading-panel">
-              <div className="panel-title">{t.readingTitle}</div>
-              <p className="reading-text">{t.readingText}</p>
+              <div className="panel-title">{readingTitle}</div>
+              <p className="reading-text">{readingText}</p>
+              {readingMeta ? <p className="muted reading-meta">{readingMeta}</p> : null}
               <div className="timer">
                 {t.timeLeft}: <span className="timer-value">{readingLeft}</span> {t.seconds}
               </div>

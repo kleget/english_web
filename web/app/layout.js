@@ -14,8 +14,10 @@ export default function RootLayout({ children }) {
   const cookieStore = cookies();
   const langCookie = cookieStore.get("ui_lang")?.value;
   const initialLang = langCookie === "en" ? "en" : "ru";
+  const themeCookie = cookieStore.get("theme")?.value;
+  const initialTheme = themeCookie === "dark" ? "dark" : "light";
   return (
-    <html lang={initialLang}>
+    <html lang={initialLang} data-theme={initialTheme}>
       <body>
         <ThemeClient />
         <UiLangProvider initialLang={initialLang}>

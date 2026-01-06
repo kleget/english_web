@@ -11,7 +11,11 @@ const TEXT = {
     review: "Повторять",
     onboarding: "Онбординг",
     profile: "Профиль",
-    settings: "Настройки"
+    settings: "Настройки",
+    community: "Сообщество",
+    stats: "Слабые слова",
+    custom: "Мои слова",
+    tech: "\u0422\u0435\u0445-\u043d\u0430\u0441\u0442\u0440\u043e\u0439\u043a\u0438"
   },
   en: {
     home: "Home",
@@ -19,7 +23,11 @@ const TEXT = {
     review: "Review",
     onboarding: "Onboarding",
     profile: "Profile",
-    settings: "Settings"
+    settings: "Settings",
+    community: "Community",
+    stats: "Weak words",
+    custom: "My words",
+    tech: "Tech"
   }
 };
 
@@ -29,7 +37,11 @@ const NAV_ITEMS = [
   { href: "/review", key: "review" },
   { href: "/onboarding", key: "onboarding" },
   { href: "/profile", key: "profile" },
-  { href: "/settings", key: "settings" }
+  { href: "/settings", key: "settings" },
+  { href: "/tech", key: "tech" },
+  { href: "/community", key: "community" },
+  { href: "/stats", key: "stats" },
+  { href: "/custom-words", key: "custom" }
 ];
 
 export default function SiteNav() {

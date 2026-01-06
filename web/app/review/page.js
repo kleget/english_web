@@ -39,6 +39,8 @@ const TEXT = {
     skipText: "Пропустить текст",
     testTitle: "Тест",
     testHint: "Введи перевод для каждого слова.",
+    qualityHint: "Оцени, насколько легко вспомнил слово (0 - не помню, 5 - легко).",
+    qualityLabel: "Оценка",
     translationPlaceholder: "Перевод",
     correct: "Верно",
     wrong: "Ошибка",
@@ -80,6 +82,8 @@ const TEXT = {
     skipText: "Skip reading",
     testTitle: "Test",
     testHint: "Type the translation for each word.",
+    qualityHint: "Rate how easy it was to recall (0 = forgot, 5 = easy).",
+    qualityLabel: "Rating",
     translationPlaceholder: "Translation",
     correct: "Correct",
     wrong: "Wrong",
@@ -126,6 +130,7 @@ export default function ReviewPage() {
   const [result, setResult] = useState(null);
   const [checkMap, setCheckMap] = useState({});
   const [correctMap, setCorrectMap] = useState({});
+  const [qualityMap, setQualityMap] = useState({});
   const [phase, setPhase] = useState("cards");
   const [readingLeft, setReadingLeft] = useState(READ_SECONDS);
   const [cardIndex, setCardIndex] = useState(0);
@@ -166,6 +171,7 @@ export default function ReviewPage() {
       setShowTranslation({});
       setCheckMap({});
       setCorrectMap({});
+      setQualityMap({});
       setPhase("cards");
       setReadingLeft(READ_SECONDS);
       setCardIndex(0);
@@ -245,6 +251,10 @@ export default function ReviewPage() {
     });
   };
 
+  const updateQuality = (wordId, value) => {
+    setQualityMap((prev) => ({ ...prev, [wordId]: value }));
+  };
+
   const startReading = () => {
     setPhase("reading");
     setReadingLeft(READ_SECONDS);
@@ -285,10 +295,17 @@ export default function ReviewPage() {
     }
     const payload = {
       session_id: sessionId,
-      words: words.map((item) => ({
-        word_id: item.word_id,
-        answer: answers[item.word_id] || ""
-      }))
+      words: words.map((item) => {
+        const quality = qualityMap[item.word_id];
+        const base = {
+          word_id: item.word_id,
+          answer: answers[item.word_id] || ""
+        };
+        if (quality === undefined) {
+          return base;
+        }
+        return { ...base, quality };
+      })
     };
     try {
       const data = await postJson("/study/review/submit", payload, token);
@@ -460,6 +477,7 @@ export default function ReviewPage() {
             <div className="panel">
               <div className="panel-title">{t.testTitle}</div>
               <p className="muted">{t.testHint}</p>
+              <p className="muted">{t.qualityHint}</p>
               <div className="input-list">
                 {words.map((item) => (
                   <div
@@ -489,6 +507,23 @@ export default function ReviewPage() {
                         )}
                       </div>
                     ) : null}
+                    <div className="quality-row">
+                      <span className="quality-label">{t.qualityLabel}</span>
+                      <div className="quality-buttons">
+                        {[0, 1, 2, 3, 4, 5].map((value) => (
+                          <button
+                            key={value}
+                            type="button"
+                            className={`quality-button${
+                              qualityMap[item.word_id] === value ? " is-active" : ""
+                            }`}
+                            onClick={() => updateQuality(item.word_id, value)}
+                          >
+                            {value}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
                   </div>
                 ))}
               </div>

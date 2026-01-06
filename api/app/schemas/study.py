@@ -11,9 +11,17 @@ class LearnWordOut(BaseModel):
     count: int | None = None
 
 
+class ReadingOut(BaseModel):
+    title: str
+    text: str
+    corpus_name: str | None = None
+    domain: str | None = None
+
+
 class LearnStartOut(BaseModel):
     session_id: int | None
     words: list[LearnWordOut]
+    reading: ReadingOut | None = None
 
 
 class LearnSubmitWord(BaseModel):
@@ -57,6 +65,7 @@ class ReviewStartOut(BaseModel):
 class ReviewSubmitWord(BaseModel):
     word_id: int
     answer: str = ""
+    quality: int | None = None
 
 
 class ReviewSubmitRequest(BaseModel):
