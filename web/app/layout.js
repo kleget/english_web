@@ -4,6 +4,7 @@ import { cookies } from "next/headers";
 import ThemeClient from "./theme-client";
 import SiteNav from "./site-nav";
 import { UiLangProvider } from "./ui-lang-context";
+import OnboardingGate from "./onboarding-gate";
 
 export const metadata = {
   title: "English Web",
@@ -21,6 +22,7 @@ export default function RootLayout({ children }) {
       <body>
         <ThemeClient />
         <UiLangProvider initialLang={initialLang}>
+          <OnboardingGate />
           <SiteNav />
           {children}
         </UiLangProvider>

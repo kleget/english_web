@@ -355,6 +355,10 @@ export default function CommunityPage() {
       })
       .catch((err) => {
         const message = err.message || t.error;
+        if (message === "Onboarding required") {
+          window.location.href = "/onboarding";
+          return;
+        }
         if (message.includes("token") || message.includes("User not found")) {
           window.location.href = "/auth";
           return;

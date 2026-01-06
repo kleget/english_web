@@ -2,8 +2,13 @@ from __future__ import annotations
 
 import argparse
 import asyncio
+import os
+import smtplib
 import sys
+import urllib.parse
+import urllib.request
 from datetime import datetime, timezone
+from email.message import EmailMessage
 from pathlib import Path
 
 from sqlalchemy import func, select
@@ -14,11 +19,41 @@ SCRIPTS_DIR = BASE_DIR / "scripts"
 sys.path.append(str(API_DIR))
 sys.path.append(str(SCRIPTS_DIR))
 
+
+def load_env_file(path: Path) -> None:
+    if not path.exists():
+        return
+    for line in path.read_text(encoding="utf-8").splitlines():
+        stripped = line.strip()
+        if not stripped or stripped.startswith("#") or "=" not in stripped:
+            continue
+        key, value = stripped.split("=", 1)
+        key = key.strip()
+        value = value.strip().strip('"').strip("'")
+        if key:
+            os.environ.setdefault(key, value)
+
+
+load_env_file(BASE_DIR / ".env")
+
 from app.api.dashboard import get_dashboard  # noqa: E402
 from app.api.stats import weak_words  # noqa: E402
+from app.core.config import (  # noqa: E402
+    ADMIN_EMAILS,
+    ADMIN_TELEGRAM_CHAT_IDS,
+    SMTP_FROM,
+    SMTP_HOST,
+    SMTP_PASSWORD,
+    SMTP_PORT,
+    SMTP_TLS,
+    SMTP_USER,
+    TELEGRAM_BOT_TOKEN,
+)
 from app.db.session import AsyncSessionLocal  # noqa: E402
 from app.models import (  # noqa: E402
     BackgroundJob,
+    ContentReport,
+    Corpus,
     LearningProfile,
     NotificationOutbox,
     NotificationSettings,
@@ -29,6 +64,21 @@ from app.models import (  # noqa: E402
 )
 
 import import_sqlite  # noqa: E402
+
+ISSUE_LABELS = {
+    "typo": "\u041e\u043f\u0435\u0447\u0430\u0442\u043a\u0430",
+    "wrong_translation": "\u041d\u0435\u0432\u0435\u0440\u043d\u044b\u0439 \u043f\u0435\u0440\u0435\u0432\u043e\u0434",
+    "artifact": "\u0410\u0440\u0442\u0435\u0444\u0430\u043a\u0442",
+    "duplicate": "\u0414\u0443\u0431\u043b\u044c",
+    "other": "\u0414\u0440\u0443\u0433\u043e\u0435",
+}
+SOURCE_LABELS = {
+    "learn": "\u0423\u0447\u0438\u0442\u044c",
+    "review": "\u041f\u043e\u0432\u0442\u043e\u0440\u044f\u0442\u044c",
+    "onboarding": "\u041e\u043d\u0431\u043e\u0440\u0434\u0438\u043d\u0433",
+    "custom": "\u041c\u043e\u0438 \u0441\u043b\u043e\u0432\u0430",
+    "other": "\u0414\u0440\u0443\u0433\u043e\u0435",
+}
 
 
 async def load_pending_jobs(session, limit: int):
@@ -182,6 +232,99 @@ async def process_send_review_notifications(session, job: BackgroundJob) -> dict
     return {"notifications_created": created}
 
 
+def build_report_message(report: ContentReport, corpus_name: str | None, reporter_email: str) -> tuple[str, str]:
+    issue_label = ISSUE_LABELS.get(report.issue_type, report.issue_type)
+    source_label = SOURCE_LABELS.get(report.source or "other", report.source or "other")
+    subject = f"[English Web] \u0420\u0435\u043f\u043e\u0440\u0442 #{report.id}: {issue_label}"
+    parts = [
+        f"\u0422\u0438\u043f: {issue_label}",
+        f"\u0421\u0442\u0430\u0442\u0443\u0441: {report.status}",
+        f"\u0421\u043b\u043e\u0432\u043e: {report.word_text or '-'}",
+        f"\u041f\u0435\u0440\u0435\u0432\u043e\u0434: {report.translation_text or '-'}",
+        f"\u0421\u0444\u0435\u0440\u0430: {corpus_name or '-'}",
+        f"\u0413\u0434\u0435: {source_label}",
+        f"\u041e\u0442: {reporter_email}",
+        f"\u041a\u043e\u043c\u043c\u0435\u043d\u0442\u0430\u0440\u0438\u0439: {report.message or '-'}",
+    ]
+    return subject, "\n".join(parts)
+
+
+def send_email(recipients: set[str], subject: str, body: str) -> None:
+    if not SMTP_HOST:
+        raise ValueError("SMTP is not configured")
+    sender = SMTP_FROM or SMTP_USER or "english-web@local"
+    msg = EmailMessage()
+    msg["Subject"] = subject
+    msg["From"] = sender
+    msg["To"] = ", ".join(sorted(recipients))
+    msg.set_content(body)
+
+    with smtplib.SMTP(SMTP_HOST, SMTP_PORT, timeout=15) as server:
+        if SMTP_TLS:
+            server.starttls()
+        if SMTP_USER:
+            server.login(SMTP_USER, SMTP_PASSWORD)
+        server.send_message(msg)
+
+
+def send_telegram(chat_id: str, text: str) -> None:
+    if not TELEGRAM_BOT_TOKEN:
+        raise ValueError("Telegram bot token is not configured")
+    url = f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/sendMessage"
+    payload = {"chat_id": chat_id, "text": text}
+    data = urllib.parse.urlencode(payload).encode("utf-8")
+    request = urllib.request.Request(url, data=data)
+    with urllib.request.urlopen(request, timeout=15) as response:
+        response.read()
+
+
+async def process_send_report_notifications(session, job: BackgroundJob) -> dict:
+    payload = job.payload or {}
+    report_id = payload.get("report_id")
+    if not report_id:
+        raise ValueError("report_id is required")
+
+    report = await session.get(ContentReport, int(report_id))
+    if not report:
+        raise ValueError("report not found")
+
+    corpus_name = None
+    if report.corpus_id:
+        corpus = await session.get(Corpus, report.corpus_id)
+        corpus_name = corpus.name if corpus else None
+
+    reporter_email = "-"
+    reporter = await session.get(User, report.user_id)
+    if reporter:
+        reporter_email = reporter.email
+
+    subject, body = build_report_message(report, corpus_name, reporter_email)
+    sent = 0
+    errors: list[str] = []
+
+    if ADMIN_EMAILS:
+        try:
+            send_email(ADMIN_EMAILS, subject, body)
+            sent += len(ADMIN_EMAILS)
+        except Exception as exc:
+            errors.append(f"email: {exc}")
+    if ADMIN_TELEGRAM_CHAT_IDS:
+        if not TELEGRAM_BOT_TOKEN:
+            errors.append("telegram: missing token")
+        else:
+            for chat_id in ADMIN_TELEGRAM_CHAT_IDS:
+                try:
+                    send_telegram(chat_id, body)
+                    sent += 1
+                except Exception as exc:
+                    errors.append(f"telegram {chat_id}: {exc}")
+
+    if sent == 0 and errors:
+        raise ValueError("; ".join(errors))
+
+    return {"sent": sent, "errors": errors}
+
+
 async def process_import_words(session, job: BackgroundJob) -> dict:
     payload = job.payload or {}
     sqlite_dir = Path(payload.get("sqlite_dir") or "E:/Code/english_project/database")
@@ -201,6 +344,8 @@ async def handle_job(session, job: BackgroundJob) -> None:
             result = await process_import_words(session, job)
         elif job.job_type == "generate_report":
             result = await process_generate_report(session, job)
+        elif job.job_type == "send_report_notifications":
+            result = await process_send_report_notifications(session, job)
         else:
             raise ValueError(f"unknown job type: {job.job_type}")
         await mark_done(session, job, result=result)

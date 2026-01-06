@@ -1,7 +1,9 @@
 from app.models.core import (
+    AuthToken,
     ChatMessage,
     Corpus,
     CorpusWordStat,
+    ContentReport,
     AuditLog,
     BackgroundJob,
     FriendRequest,
@@ -29,9 +31,11 @@ from app.models.core import (
 )
 
 __all__ = [
+    "AuthToken",
     "ChatMessage",
     "Corpus",
     "CorpusWordStat",
+    "ContentReport",
     "AuditLog",
     "BackgroundJob",
     "FriendRequest",

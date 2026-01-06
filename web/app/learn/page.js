@@ -16,6 +16,7 @@ const TEXT = {
     loading: "Загрузка...",
     noWords: "Новых слов нет.",
     refresh: "Обновить",
+    report: "\u0421\u043e\u043e\u0431\u0449\u0438\u0442\u044c \u043e\u0431 \u043e\u0448\u0438\u0431\u043a\u0435",
     progress: "Прогресс сессии",
     tip: "Совет: сначала проговори перевод вслух, а потом вводи ответ.",
     tapCard: "Нажми на карточку, чтобы открыть перевод",
@@ -54,6 +55,7 @@ const TEXT = {
     loading: "Loading...",
     noWords: "No new words yet.",
     refresh: "Refresh",
+    report: "Report issue",
     progress: "Session progress",
     tip: "Tip: say the translation out loud before typing.",
     tapCard: "Tap the card to reveal the translation",
@@ -235,6 +237,21 @@ export default function LearnPage() {
     window.location.href = "/";
   };
 
+  const reportIssue = (wordItem) => {
+    const params = new URLSearchParams();
+    params.set("source", "learn");
+    if (wordItem?.word) {
+      params.set("word", wordItem.word);
+    }
+    if (wordItem?.translation) {
+      params.set("translation", wordItem.translation);
+    }
+    if (wordItem?.word_id) {
+      params.set("word_id", String(wordItem.word_id));
+    }
+    window.location.href = `/reports?${params.toString()}`;
+  };
+
   const advanceCard = () => {
     setCardIndex((prev) => Math.min(prev + 1, words.length));
     setShowTranslation({});
@@ -371,6 +388,13 @@ export default function LearnPage() {
                   <div className="card-actions">
                     <button type="button" onClick={advanceCard}>
                       {t.learnedNext}
+                    </button>
+                    <button
+                      type="button"
+                      className="button-secondary"
+                      onClick={() => reportIssue(currentCard)}
+                    >
+                      {t.report}
                     </button>
                   </div>
                 </div>

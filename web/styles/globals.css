@@ -409,6 +409,10 @@ button[disabled] {
   align-items: end;
 }
 
+.report-full {
+  grid-column: 1 / -1;
+}
+
 .profile-cell {
   display: grid;
   gap: 6px;

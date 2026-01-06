@@ -16,6 +16,7 @@ const TEXT = {
     loading: "Загрузка...",
     noWords: "Слов для повторения нет.",
     refresh: "Обновить",
+    report: "\u0421\u043e\u043e\u0431\u0449\u0438\u0442\u044c \u043e\u0431 \u043e\u0448\u0438\u0431\u043a\u0435",
     seed: "Создать тестовые данные",
     seeding: "Создаю...",
     progress: "Прогресс сессии",
@@ -59,6 +60,7 @@ const TEXT = {
     loading: "Loading...",
     noWords: "No words to review.",
     refresh: "Refresh",
+    report: "Report issue",
     seed: "Seed demo data",
     seeding: "Seeding...",
     progress: "Session progress",
@@ -280,6 +282,21 @@ export default function ReviewPage() {
     window.location.href = "/";
   };
 
+  const reportIssue = (wordItem) => {
+    const params = new URLSearchParams();
+    params.set("source", "review");
+    if (wordItem?.word) {
+      params.set("word", wordItem.word);
+    }
+    if (wordItem?.translation) {
+      params.set("translation", wordItem.translation);
+    }
+    if (wordItem?.word_id) {
+      params.set("word_id", String(wordItem.word_id));
+    }
+    window.location.href = `/reports?${params.toString()}`;
+  };
+
   const advanceCard = () => {
     setCardIndex((prev) => Math.min(prev + 1, words.length));
     setShowTranslation({});
@@ -435,6 +452,13 @@ export default function ReviewPage() {
                   <div className="card-actions">
                     <button type="button" onClick={advanceCard}>
                       {t.next}
+                    </button>
+                    <button
+                      type="button"
+                      className="button-secondary"
+                      onClick={() => reportIssue(currentCard)}
+                    >
+                      {t.report}
                     </button>
                   </div>
                 </div>

@@ -75,7 +75,8 @@ const TEXT = {
       refresh_stats: "\u041e\u0431\u043d\u043e\u0432\u0438\u0442\u044c \u0441\u0442\u0430\u0442\u0438\u0441\u0442\u0438\u043a\u0443",
       generate_report: "\u0421\u0444\u043e\u0440\u043c\u0438\u0440\u043e\u0432\u0430\u0442\u044c \u043e\u0442\u0447\u0435\u0442",
       send_review_notifications: "\u0420\u0430\u0437\u043e\u0441\u043b\u0430\u0442\u044c \u0443\u0432\u0435\u0434\u043e\u043c\u043b\u0435\u043d\u0438\u044f",
-      import_words: "\u0418\u043c\u043f\u043e\u0440\u0442 \u0441\u043b\u043e\u0432"
+      import_words: "\u0418\u043c\u043f\u043e\u0440\u0442 \u0441\u043b\u043e\u0432",
+      send_report_notifications: "\u0420\u0435\u043f\u043e\u0440\u0442\u044b: \u0443\u0432\u0435\u0434\u043e\u043c\u0438\u0442\u044c \u0430\u0434\u043c\u0438\u043d\u0430"
     }
   },
   en: {
@@ -136,7 +137,8 @@ const TEXT = {
       refresh_stats: "Refresh stats",
       generate_report: "Generate report",
       send_review_notifications: "Send reminders",
-      import_words: "Import words"
+      import_words: "Import words",
+      send_report_notifications: "Report notifications"
     }
   }
 };

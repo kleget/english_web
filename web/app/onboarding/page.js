@@ -7,6 +7,69 @@ import { useUiLang } from "../ui-lang-context";
 
 const API_BASE = process.env.NEXT_PUBLIC_API_BASE || "http://localhost:8000";
 
+const CORPUS_NAME_MAP = {
+  agronomandagricult: {
+    ru: "Агрономия и сельское хозяйство",
+    en: "Agronomy and Agriculture"
+  },
+  biologicalsciences: {
+    ru: "Биологические науки",
+    en: "Biological Sciences"
+  },
+  chemicalsciences: {
+    ru: "Химические науки",
+    en: "Chemical Sciences"
+  },
+  economicsciences: {
+    ru: "Экономические науки",
+    en: "Economic Sciences"
+  },
+  engineeringsciences: {
+    ru: "Инженерные науки",
+    en: "Engineering Sciences"
+  },
+  geosciences: {
+    ru: "Науки о Земле",
+    en: "Geosciences"
+  },
+  humanities: {
+    ru: "Гуманитарные науки",
+    en: "Humanities"
+  },
+  it: {
+    ru: "Информационные технологии",
+    en: "Information Technology"
+  },
+  mathematicalscience: {
+    ru: "Математические науки",
+    en: "Mathematical Sciences"
+  },
+  medicalbiomedical: {
+    ru: "Медико-биологические науки",
+    en: "Medical and Biomedical Sciences"
+  },
+  nonscientificenglish: {
+    ru: "Общий английский",
+    en: "General English"
+  },
+  nonscientificrussian: {
+    ru: "Общий русский",
+    en: "General Russian"
+  },
+  physicalsciences: {
+    ru: "Физические науки",
+    en: "Physical Sciences"
+  },
+  psychologyandcognitive: {
+    ru: "Психология и когнитивные науки",
+    en: "Psychology and Cognitive Sciences"
+  },
+  socialsciences: {
+    ru: "Социальные науки",
+    en: "Social Sciences"
+  }
+};
+
 const TEXT = {
   ru: {
     title: "Онбординг",
@@ -212,6 +275,23 @@ async function postJson(path, payload, token) {
     throw new Error(message || "Request failed");
   }
   return response.json();
+}
+
+function normalizeCorpusKey(corpus) {
+  const raw = (corpus?.slug || corpus?.name || "").toString();
+  if (!raw) {
+    return "";
+  }
+  return raw.replace(/_(ru|en)_(ru|en)$/i, "").toLowerCase();
+}
+
+function getCorpusLabel(corpus, uiLang) {
+  const key = normalizeCorpusKey(corpus);
+  const entry = key ? CORPUS_NAME_MAP[key] : null;
+  if (entry) {
+    return entry[uiLang] || entry.en || entry.ru;
+  }
+  return corpus?.name || corpus?.slug || "";
 }
 
 function clampNumber(value, minValue, maxValue) {
@@ -535,6 +615,7 @@ export default function OnboardingPage() {
   const previewSubtitle = previewCorpus
     ? t.preview.subtitle.replace("{limit}", previewLimit)
     : "";
+  const previewTitle = previewCorpus ? getCorpusLabel(previewCorpus, uiLang) : t.preview.title;
   const canLoadMore =
     previewWords.length >= previewLimit && previewLimit < 100 && !previewLoading;
 
@@ -727,6 +808,7 @@ export default function OnboardingPage() {
                   {corpora.map((corpus) => {
                     const isSelected = Boolean(selected[corpus.id]);
                     const limitValue = selected[corpus.id]?.target_word_limit ?? 0;
+                    const corpusLabel = getCorpusLabel(corpus, uiLang);
                     return (
                       <div
                         key={corpus.id}
@@ -734,7 +816,7 @@ export default function OnboardingPage() {
                         onClick={() => toggleCorpus(corpus.id)}
                       >
                         {isSelected ? <span className="corpus-badge">{t.corpora.badge}</span> : null}
-                        <div className="corpus-title">{corpus.name}</div>
+                        <div className="corpus-title">{corpusLabel}</div>
                         <div className="corpus-meta">
                           <span>
                             {corpus.words_total} {t.corpora.words}
@@ -858,7 +940,7 @@ export default function OnboardingPage() {
           <div className="modal-card" onClick={(event) => event.stopPropagation()}>
             <div className="modal-header">
               <div>
-                <div className="modal-title">{previewCorpus?.name || t.preview.title}</div>
+                <div className="modal-title">{previewTitle}</div>
                 <div className="modal-sub">
                   {previewCorpus
                     ? `${previewCorpus.source_lang.toUpperCase()} - ${previewCorpus.target_lang.toUpperCase()} · ${previewSubtitle}`

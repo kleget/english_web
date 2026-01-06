@@ -29,6 +29,27 @@ class User(Base):
     hashed_password: Mapped[str] = mapped_column(String(255))
     is_active: Mapped[bool] = mapped_column(Boolean, default=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    email_verified_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+
+
+class AuthToken(Base):
+    __tablename__ = "auth_tokens"
+    __table_args__ = (
+        Index("ix_auth_tokens_token_hash", "token_hash", unique=True),
+        Index("ix_auth_tokens_user_purpose", "user_id", "purpose"),
+        Index("ix_auth_tokens_expires", "expires_at"),
+    )
+
+    id: Mapped[int] = mapped_column(BigInteger, primary_key=True)
+    user_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True),
+        ForeignKey("users.id", ondelete="CASCADE"),
+    )
+    purpose: Mapped[str] = mapped_column(String(16))
+    token_hash: Mapped[str] = mapped_column(String(64))
+    expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+    used_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
 
 class UserProfile(Base):
@@ -435,6 +456,48 @@ class Translation(Base):
     target_lang: Mapped[str] = mapped_column(String(2))
     translation: Mapped[str] = mapped_column(Text)
     source: Mapped[str | None] = mapped_column(String(64), nullable=True)
+
+
+class ContentReport(Base):
+    __tablename__ = "content_reports"
+    __table_args__ = (
+        Index("ix_content_reports_status", "status"),
+        Index("ix_content_reports_created", "created_at"),
+        Index("ix_content_reports_word", "word_id"),
+    )
+
+    id: Mapped[int] = mapped_column(BigInteger, primary_key=True)
+    user_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True),
+        ForeignKey("users.id", ondelete="CASCADE"),
+    )
+    profile_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True),
+        ForeignKey("learning_profiles.id", ondelete="SET NULL"),
+        nullable=True,
+    )
+    corpus_id: Mapped[int | None] = mapped_column(
+        ForeignKey("corpora.id", ondelete="SET NULL"),
+        nullable=True,
+    )
+    word_id: Mapped[int | None] = mapped_column(
+        ForeignKey("words.id", ondelete="SET NULL"),
+        nullable=True,
+    )
+    translation_id: Mapped[int | None] = mapped_column(
+        ForeignKey("translations.id", ondelete="SET NULL"),
+        nullable=True,
+    )
+    issue_type: Mapped[str] = mapped_column(String(32))
+    status: Mapped[str] = mapped_column(String(16), default="open")
+    source: Mapped[str | None] = mapped_column(String(32), nullable=True)
+    word_text: Mapped[str | None] = mapped_column(Text, nullable=True)
+    translation_text: Mapped[str | None] = mapped_column(Text, nullable=True)
+    message: Mapped[str | None] = mapped_column(Text, nullable=True)
+    admin_note: Mapped[str | None] = mapped_column(Text, nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    resolved_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
 
 
 class UserCustomWord(Base):
