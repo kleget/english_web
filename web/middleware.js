@@ -1,11 +1,16 @@
 import { NextResponse } from "next/server";
 
+const PUBLIC_FILE = /\.(.*)$/;
+
 export function middleware(request) {
   const { pathname } = request.nextUrl;
-  if (pathname.startsWith("/auth") || pathname.startsWith("/_next")) {
-    return NextResponse.next();
-  }
-  if (pathname.startsWith("/favicon")) {
+  if (
+    pathname.startsWith("/auth") ||
+    pathname.startsWith("/_next") ||
+    pathname.startsWith("/brand") ||
+    pathname.startsWith("/favicon") ||
+    PUBLIC_FILE.test(pathname)
+  ) {
     return NextResponse.next();
   }
 
