@@ -57,7 +57,8 @@ const TEXT = {
     },
     actions: {
       refresh: "\u041e\u0431\u043d\u043e\u0432\u0438\u0442\u044c",
-      refreshing: "\u041e\u0431\u043d\u043e\u0432\u043b\u0435\u043d\u0438\u0435..."
+      refreshing: "\u041e\u0431\u043d\u043e\u0432\u043b\u0435\u043d\u0438\u0435...",
+      settings: "\u041f\u0440\u043e\u0444\u0438\u043b\u044c"
     },
     status: {
       pending: "\u041e\u0436\u0438\u0434\u0430\u0435\u0442",
@@ -119,7 +120,8 @@ const TEXT = {
     },
     actions: {
       refresh: "Refresh",
-      refreshing: "Refreshing..."
+      refreshing: "Refreshing...",
+      settings: "Profile"
     },
     status: {
       pending: "Pending",
@@ -419,6 +421,15 @@ export default function TechPage() {
         <div>
           <h1>{t.title}</h1>
           <p>{t.tagline}</p>
+        </div>
+        <div className="page-header-actions">
+          <button
+            type="button"
+            className="button-secondary"
+            onClick={() => (window.location.href = "/profile")}
+          >
+            {t.actions.settings}
+          </button>
         </div>
       </div>
 

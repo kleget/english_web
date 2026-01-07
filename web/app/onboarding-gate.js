@@ -7,7 +7,7 @@ import { getCookie, setCookie } from "./lib/client-cookies";
 
 const API_BASE = process.env.NEXT_PUBLIC_API_BASE || "http://localhost:8000";
 
-const SKIP_PREFIXES = ["/auth", "/onboarding", "/u/"];
+const SKIP_PREFIXES = ["/auth", "/onboarding", "/welcome", "/u/"];
 
 function shouldSkip(pathname) {
   if (!pathname) {

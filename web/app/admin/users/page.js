@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 
 import { getCookie, setCookie } from "../../lib/client-cookies";
 import { useUiLang } from "../../ui-lang-context";
+import AdminNav from "../admin-nav";
 
 const API_BASE = process.env.NEXT_PUBLIC_API_BASE || "http://localhost:8000";
 
@@ -30,7 +31,7 @@ const TEXT = {
       admin: "Админ",
       lang: "Язык интерфейса",
       theme: "Тема",
-      onboarding: "Онбординг",
+      onboarding: "Настройка обучения",
       native: "Родной язык",
       target: "Целевой язык"
     }
@@ -57,7 +58,7 @@ const TEXT = {
       admin: "Admin",
       lang: "Interface language",
       theme: "Theme",
-      onboarding: "Onboarding",
+      onboarding: "Setup",
       native: "Native",
       target: "Target"
     }
@@ -223,6 +224,7 @@ export default function AdminUsersPage() {
           </button>
         </div>
       </div>
+      <AdminNav />
 
       <div className="panel">
         <div className="community-inline">

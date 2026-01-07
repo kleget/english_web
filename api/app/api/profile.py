@@ -1,10 +1,11 @@
 from __future__ import annotations
 
-from fastapi import APIRouter, Depends, HTTPException, status
-from sqlalchemy import select
+from fastapi import APIRouter, Depends, HTTPException, Request, status
+from sqlalchemy import delete, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.auth import get_current_user
+from app.core.audit import log_audit_event
 from app.db.session import get_db
 from app.models import User, UserProfile
 from app.schemas.profile import ProfileOut, ProfileUpdateRequest
@@ -71,3 +72,15 @@ async def update_profile(
 
     await db.commit()
     return ProfileOut(interface_lang=profile.interface_lang, theme=profile.theme or "light")
+
+
+@router.delete("")
+async def delete_profile(
+    request: Request,
+    user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+) -> dict:
+    await log_audit_event("auth.delete", user_id=user.id, request=request, db=db)
+    await db.execute(delete(User).where(User.id == user.id))
+    await db.commit()
+    return {"deleted": True}

@@ -12,3 +12,10 @@ export function setCookie(name, value) {
   }
   document.cookie = `${name}=${value}; path=/`;
 }
+
+export function deleteCookie(name) {
+  if (typeof document === "undefined") {
+    return;
+  }
+  document.cookie = `${name}=; path=/; max-age=0`;
+}

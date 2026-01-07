@@ -7,8 +7,8 @@ import { UiLangProvider } from "./ui-lang-context";
 import OnboardingGate from "./onboarding-gate";
 
 export const metadata = {
-  title: "English Web",
-  description: "MVP"
+  title: "Recallio",
+  description: "Recallio"
 };
 
 export default function RootLayout({ children }) {
@@ -17,13 +17,15 @@ export default function RootLayout({ children }) {
   const initialLang = langCookie === "en" ? "en" : "ru";
   const themeCookie = cookieStore.get("theme")?.value;
   const initialTheme = themeCookie === "dark" ? "dark" : "light";
+  const adminCookie = cookieStore.get("is_admin")?.value;
+  const initialIsAdmin = adminCookie === "1";
   return (
     <html lang={initialLang} data-theme={initialTheme}>
       <body>
         <ThemeClient />
         <UiLangProvider initialLang={initialLang}>
           <OnboardingGate />
-          <SiteNav />
+          <SiteNav initialIsAdmin={initialIsAdmin} />
           {children}
         </UiLangProvider>
       </body>

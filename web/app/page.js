@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 
 import { getCookie, setCookie } from "./lib/client-cookies";
+import TourOverlay from "./tour-overlay";
 import { useUiLang } from "./ui-lang-context";
 
 const API_BASE = process.env.NEXT_PUBLIC_API_BASE || "http://localhost:8000";
@@ -32,11 +33,48 @@ const TEXT = {
     langRu: "Русский",
     langEn: "English",
     chartAria: "График количества выученных слов",
-    nav: {
-      profile: "Профиль",
-      settings: "Настройки"
+    sections: {
+      title: "Разделы",
+      weakTitle: "Слабые слова",
+      weakDesc: "Слова, в которых чаще всего ошибаешься.",
+      customTitle: "Мои слова",
+      customDesc: "Личный список слов для изучения.",
+      reportTitle: "Сообщить о проблеме",
+      reportDesc: "Сообщить об ошибке в слове или переводе.",
+      helpTitle: "Инструкция",
+      helpDesc: "Подсказки и быстрый тур по сервису."
+    },
+    tour: {
+      title: "Быстрый тур",
+      stepLabel: "Шаг",
+      back: "Назад",
+      next: "Далее",
+      done: "К сообществу",
+      skip: "Закрыть",
+      steps: [
+        {
+          key: "stats",
+          title: "Статистика",
+          desc: "Сколько слов выучено и сколько дней учишься."
+        },
+        {
+          key: "today",
+          title: "Сегодня",
+          desc: "Запуск обучения и повторения на сегодня."
+        },
+        {
+          key: "sections",
+          title: "Разделы",
+          desc: "Слабые слова, свои слова и сообщения об ошибках."
+        },
+        {
+          key: "chart",
+          title: "График дисциплины",
+          desc: "Рост словаря по дням."
+        }
+      ]
     }
-  },
+},
   en: {
     title: "Home",
     tagline: "Small daily steps lead to a big result.",
@@ -61,11 +99,48 @@ const TEXT = {
     langRu: "Русский",
     langEn: "English",
     chartAria: "Chart of learned words",
-    nav: {
-      profile: "Profile",
-      settings: "Settings"
+    sections: {
+      title: "Sections",
+      weakTitle: "Weak words",
+      weakDesc: "Words where you make the most mistakes.",
+      customTitle: "My words",
+      customDesc: "Your personal words to learn.",
+      reportTitle: "Report an issue",
+      reportDesc: "Tell us about a wrong word or translation.",
+      helpTitle: "Help & tour",
+      helpDesc: "Instructions and a quick tour."
+    },
+    tour: {
+      title: "Quick tour",
+      stepLabel: "Step",
+      back: "Back",
+      next: "Next",
+      done: "To community",
+      skip: "Close",
+      steps: [
+        {
+          key: "stats",
+          title: "Stats",
+          desc: "Your progress and daily numbers."
+        },
+        {
+          key: "today",
+          title: "Today",
+          desc: "Start today's learning or review."
+        },
+        {
+          key: "sections",
+          title: "Sections",
+          desc: "Weak words, custom words, and reports."
+        },
+        {
+          key: "chart",
+          title: "Discipline chart",
+          desc: "See progress over time."
+        }
+      ]
     }
-  }
+}
 };
 
 async function getJson(path, token) {
@@ -104,13 +179,41 @@ export default function Home() {
     window.location.href = "/review";
   };
 
-  const goProfile = () => {
-    window.location.href = "/profile";
+  const continueToCommunity = () => {
+    if (typeof window !== "undefined") {
+      window.localStorage.setItem("tour_active", "1");
+      window.localStorage.setItem("tour_step", "0");
+      window.localStorage.setItem("tour_stage", "community");
+    }
+    window.location.href = "/community";
+    return "continue";
   };
 
-  const goSettings = () => {
-    window.location.href = "/settings";
-  };
+
+  const sections = [
+    {
+      href: "/stats",
+      title: t.sections.weakTitle,
+      desc: t.sections.weakDesc
+    },
+    {
+      href: "/custom-words",
+      title: t.sections.customTitle,
+      desc: t.sections.customDesc
+    },
+    {
+      href: "/reports",
+      title: t.sections.reportTitle,
+      desc: t.sections.reportDesc
+    },
+    {
+      href: "/welcome",
+      title: t.sections.helpTitle,
+      desc: t.sections.helpDesc
+    }
+  ];
+  const tourSteps = t.tour ? t.tour.steps || [] : [];
+  const tourLabels = t.tour || {};
 
   useEffect(() => {
     let active = true;
@@ -285,14 +388,6 @@ export default function Home() {
           <h1>{t.title}</h1>
           <p>{t.tagline}</p>
         </div>
-        <div className="page-header-actions">
-          <button type="button" className="button-secondary" onClick={goProfile}>
-            {t.nav.profile}
-          </button>
-          <button type="button" className="button-secondary" onClick={goSettings}>
-            {t.nav.settings}
-          </button>
-        </div>
       </div>
 
       {loading ? <p className="muted">{t.loading}</p> : null}
@@ -300,7 +395,7 @@ export default function Home() {
 
       {dashboard ? (
         <>
-          <div className="stats-grid">
+          <div className="stats-grid" data-tour="stats">
             <div className="stat-card">
               <div className="stat-label">{t.stats.known}</div>
               <div className="stat-value">{dashboard.known_words}</div>
@@ -325,7 +420,7 @@ export default function Home() {
             </div>
           </div>
 
-          <div className="panel">
+          <div className="panel" data-tour="today">
             <div className="panel-title">{t.today}</div>
             <div className="actions">
               <button type="button" onClick={goLearn}>
@@ -337,7 +432,19 @@ export default function Home() {
             </div>
           </div>
 
-          <div className="panel">
+          <div className="panel" data-tour="sections">
+            <div className="panel-title">{t.sections.title}</div>
+            <div className="card-list">
+              {sections.map((item) => (
+                <a key={item.href} className="card card-link" href={item.href}>
+                  <div className="card-title">{item.title}</div>
+                  <div className="card-sub">{item.desc}</div>
+                </a>
+              ))}
+            </div>
+          </div>
+
+          <div className="panel" data-tour="chart">
             <div className="panel-title">{t.chartTitle}</div>
             <p className="muted">{t.chartDesc}</p>
             {chart && chart.points.length ? (
@@ -410,6 +517,7 @@ export default function Home() {
               <p className="muted">{t.chartNoData}</p>
             )}
           </div>
+          <TourOverlay steps={tourSteps} labels={tourLabels} stage="home" onFinish={continueToCommunity} />
         </>
       ) : null}
     </main>

@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 
 import { getCookie } from "../lib/client-cookies";
+import TourOverlay from "../tour-overlay";
 import { useUiLang } from "../ui-lang-context";
 
 const API_BASE = process.env.NEXT_PUBLIC_API_BASE || "http://localhost:8000";
@@ -14,6 +15,48 @@ const TEXT = {
       "\u041f\u0443\u0431\u043b\u0438\u0447\u043d\u044b\u0439 \u043f\u0440\u043e\u0444\u0438\u043b\u044c, \u0434\u0440\u0443\u0437\u044c\u044f, \u0447\u0435\u043b\u043b\u0435\u043d\u0434\u0436\u0438 \u0438 \u043b\u0438\u0434\u0435\u0440\u0431\u043e\u0440\u0434\u044b.",
     loading: "\u0417\u0430\u0433\u0440\u0443\u0437\u043a\u0430...",
     error: "\u041d\u0435 \u0443\u0434\u0430\u043b\u043e\u0441\u044c \u0437\u0430\u0433\u0440\u0443\u0437\u0438\u0442\u044c \u0434\u0430\u043d\u043d\u044b\u0435.",
+    tabs: {
+      activity: "\u0410\u043a\u0442\u0438\u0432\u043d\u043e\u0441\u0442\u044c",
+      friends: "\u0414\u0440\u0443\u0437\u044c\u044f",
+      profile: "\u041f\u0440\u043e\u0444\u0438\u043b\u044c",
+      chat: "\u0427\u0430\u0442",
+      challenges: "\u0427\u0435\u043b\u043b\u0435\u043d\u0434\u0436\u0438"
+    },
+    tour: {
+      title: "\u0421\u043e\u043e\u0431\u0449\u0435\u0441\u0442\u0432\u043e",
+      stepLabel: "\u0428\u0430\u0433",
+      back: "\u041d\u0430\u0437\u0430\u0434",
+      next: "\u0414\u0430\u043b\u0435\u0435",
+      done: "\u0413\u043e\u0442\u043e\u0432\u043e",
+      skip: "\u0417\u0430\u043a\u0440\u044b\u0442\u044c",
+      steps: [
+        {
+          key: "community-feed",
+          title: "\u041b\u0435\u043d\u0442\u0430 \u0430\u043a\u0442\u0438\u0432\u043d\u043e\u0441\u0442\u0438",
+          desc: "\u0421\u043c\u043e\u0442\u0440\u0438, \u0447\u0442\u043e \u0434\u0435\u043b\u0430\u044e\u0442 \u0434\u0440\u0443\u0433\u0438\u0435 \u0443\u0447\u0430\u0441\u0442\u043d\u0438\u043a\u0438."
+        },
+        {
+          key: "community-friends",
+          title: "\u0414\u0440\u0443\u0437\u044c\u044f \u0438 \u0437\u0430\u044f\u0432\u043a\u0438",
+          desc: "\u0414\u043e\u0431\u0430\u0432\u043b\u044f\u0439 \u0434\u0440\u0443\u0437\u0435\u0439 \u0438 \u0443\u043f\u0440\u0430\u0432\u043b\u044f\u0439 \u0437\u0430\u044f\u0432\u043a\u0430\u043c\u0438."
+        },
+        {
+          key: "community-profile",
+          title: "\u041f\u0443\u0431\u043b\u0438\u0447\u043d\u044b\u0439 \u043f\u0440\u043e\u0444\u0438\u043b\u044c",
+          desc: "\u041d\u0430\u0441\u0442\u0440\u043e\u0439 \u043d\u0438\u043a, \u043e\u043f\u0438\u0441\u0430\u043d\u0438\u0435 \u0438 \u0441\u0441\u044b\u043b\u043a\u0443 \u0434\u043b\u044f \u0448\u0435\u0440\u0438\u043d\u0433\u0430."
+        },
+        {
+          key: "community-chat",
+          title: "\u041e\u0431\u0449\u0438\u0439 \u0447\u0430\u0442",
+          desc: "\u041e\u0431\u0441\u0443\u0436\u0434\u0430\u0439 \u043f\u0440\u043e\u0433\u0440\u0435\u0441\u0441 \u0438 \u043f\u043e\u043b\u0443\u0447\u0430\u0439 \u043c\u043e\u0442\u0438\u0432\u0430\u0446\u0438\u044e."
+        },
+        {
+          key: "community-challenges",
+          title: "\u0427\u0435\u043b\u043b\u0435\u043d\u0434\u0436\u0438",
+          desc: "\u0417\u0430\u043f\u0443\u0441\u043a\u0430\u0439 \u043e\u0431\u0449\u0438\u0435 \u0447\u0435\u043b\u043b\u0435\u043d\u0434\u0436\u0438 \u0438 \u0441\u043b\u0435\u0434\u0438 \u0437\u0430 \u043f\u0440\u043e\u0433\u0440\u0435\u0441\u0441\u043e\u043c."
+        }
+      ]
+    },
     profile: {
       title: "\u041c\u043e\u0439 \u043f\u0443\u0431\u043b\u0438\u0447\u043d\u044b\u0439 \u043f\u0440\u043e\u0444\u0438\u043b\u044c",
       handle: "\u041d\u0438\u043a (\u043b\u0430\u0442\u0438\u043d\u0438\u0446\u0430)",
@@ -111,6 +154,48 @@ const TEXT = {
     tagline: "Public profile, friends, challenges, and leaderboards.",
     loading: "Loading...",
     error: "Failed to load data.",
+    tabs: {
+      activity: "Activity",
+      friends: "Friends",
+      profile: "Profile",
+      chat: "Chat",
+      challenges: "Challenges"
+    },
+    tour: {
+      title: "Community",
+      stepLabel: "Step",
+      back: "Back",
+      next: "Next",
+      done: "Done",
+      skip: "Close",
+      steps: [
+        {
+          key: "community-feed",
+          title: "Activity feed",
+          desc: "See what other learners are doing."
+        },
+        {
+          key: "community-friends",
+          title: "Friends",
+          desc: "Add friends and manage requests."
+        },
+        {
+          key: "community-profile",
+          title: "Public profile",
+          desc: "Set up your handle, bio, and share link."
+        },
+        {
+          key: "community-chat",
+          title: "Global chat",
+          desc: "Discuss progress and stay motivated."
+        },
+        {
+          key: "community-challenges",
+          title: "Challenges",
+          desc: "Join group challenges and track progress."
+        }
+      ]
+    },
     profile: {
       title: "My public profile",
       handle: "Handle",
@@ -248,6 +333,26 @@ async function sendJson(path, method, payload, token) {
 export default function CommunityPage() {
   const { lang } = useUiLang();
   const t = TEXT[lang] || TEXT.ru;
+  const tourSteps = t.tour ? t.tour.steps || [] : [];
+  const tourLabels = t.tour || {};
+  const [activeSection, setActiveSection] = useState("activity");
+  const sectionKeys = ["activity", "friends", "profile", "chat", "challenges"];
+  const handleTourStep = (step) => {
+    if (!step) {
+      return;
+    }
+    const map = {
+      "community-feed": "activity",
+      "community-friends": "friends",
+      "community-profile": "profile",
+      "community-chat": "chat",
+      "community-challenges": "challenges"
+    };
+    const next = map[step.key];
+    if (next) {
+      setActiveSection((prev) => (prev === next ? prev : next));
+    }
+  };
   const [token, setToken] = useState("");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -751,125 +856,144 @@ export default function CommunityPage() {
 
       {!loading && profile ? (
         <>
-          <div className="panel">
-            <div className="panel-title">{t.feed.title}</div>
-            {feed.length === 0 ? (
-              <p className="muted">{t.feed.empty}</p>
-            ) : (
-              <div className="feed-list">
-                {feed.map((item, index) => (
-                  <div
-                    key={`${item.event_type}-${item.created_at}-${index}`}
-                    className="feed-item"
-                  >
-                    <div className="feed-main">
-                      <strong>@{item.actor.handle}</strong>
-                      <span className="feed-text">{formatFeedText(item)}</span>
-                    </div>
-                    <div className="feed-time">{formatTime(item.created_at)}</div>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-
-          <div className="panel">
-            <div className="panel-title">{t.friends.title}</div>
-            <div className="community-grid">
-              <div className="community-card">
-                <div className="panel-title">{t.friends.addTitle}</div>
-                <div className="community-inline">
-                  <input
-                    value={friendHandle}
-                    placeholder={t.friends.handlePlaceholder}
-                    onChange={(event) => setFriendHandle(event.target.value)}
-                  />
-                  <button type="button" onClick={sendFriendRequest}>
-                    {t.friends.addAction}
-                  </button>
-                </div>
-                {friendStatus ? <p className="success">{friendStatus}</p> : null}
-                {friendError ? <p className="error">{friendError}</p> : null}
-              </div>
-              <div className="community-card">
-                <div className="panel-title">{t.friends.incoming}</div>
-                {incomingRequests.length === 0 ? (
-                  <p className="muted">{t.friends.emptyIncoming}</p>
-                ) : (
-                  <div className="social-list">
-                    {incomingRequests.map((item) => (
-                      <div key={item.id} className="social-item">
-                        <div>
-                          <strong>@{item.handle}</strong>
-                          <div className="social-meta">{item.display_name || "-"}</div>
-                        </div>
-                        <div className="community-inline">
-                          <button type="button" onClick={() => acceptFriendRequest(item.id)}>
-                            {t.friends.accept}
-                          </button>
-                          <button
-                            type="button"
-                            className="button-secondary"
-                            onClick={() => declineFriendRequest(item.id)}
-                          >
-                            {t.friends.decline}
-                          </button>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
-              <div className="community-card">
-                <div className="panel-title">{t.friends.outgoing}</div>
-                {outgoingRequests.length === 0 ? (
-                  <p className="muted">{t.friends.emptyOutgoing}</p>
-                ) : (
-                  <div className="social-list">
-                    {outgoingRequests.map((item) => (
-                      <div key={item.id} className="social-item">
-                        <div>
-                          <strong>@{item.handle}</strong>
-                          <div className="social-meta">{item.display_name || "-"}</div>
-                        </div>
-                        <span className="status-pill warn">{t.friends.pending}</span>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
+          <div className="community-tabs">
+            <div className="segmented">
+              {sectionKeys.map((key) => (
+                <button
+                  key={key}
+                  type="button"
+                  className={activeSection === key ? "is-active" : ""}
+                  onClick={() => setActiveSection(key)}
+                >
+                  {t.tabs[key]}
+                </button>
+              ))}
             </div>
-            <div className="panel-title">{t.friends.list}</div>
-            {friends.length === 0 ? (
-              <p className="muted">{t.friends.emptyFriends}</p>
-            ) : (
-              <div className="social-list">
-                {friends.map((item) => (
-                  <div key={item.handle} className="social-item">
-                    <div>
-                      <strong>@{item.handle}</strong>
-                      <div className="social-meta">{item.display_name || "-"}</div>
-                    </div>
-                    <div className="community-inline">
-                      <a className="button-secondary" href={`/u/${item.handle}`}>
-                        {t.actions.open}
-                      </a>
-                      <button
-                        type="button"
-                        className="button-secondary"
-                        onClick={() => removeFriend(item.handle)}
-                      >
-                        {t.friends.remove}
-                      </button>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
           </div>
+          {activeSection === "activity" ? (
+            <div className="panel" data-tour="community-feed">
+              <div className="panel-title">{t.feed.title}</div>
+              {feed.length === 0 ? (
+                <p className="muted">{t.feed.empty}</p>
+              ) : (
+                <div className="feed-list">
+                  {feed.map((item, index) => (
+                    <div
+                      key={`${item.event_type}-${item.created_at}-${index}`}
+                      className="feed-item"
+                    >
+                      <div className="feed-main">
+                        <strong>@{item.actor.handle}</strong>
+                        <span className="feed-text">{formatFeedText(item)}</span>
+                      </div>
+                      <div className="feed-time">{formatTime(item.created_at)}</div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          ) : null}
 
-          <div className="panel">
-            <div className="panel-title">{t.groups.title}</div>
+          {activeSection === "friends" ? (
+            <div className="panel" data-tour="community-friends">
+              <div className="panel-title">{t.friends.title}</div>
+              <div className="community-grid">
+                <div className="community-card">
+                  <div className="panel-title">{t.friends.addTitle}</div>
+                  <div className="community-inline">
+                    <input
+                      value={friendHandle}
+                      placeholder={t.friends.handlePlaceholder}
+                      onChange={(event) => setFriendHandle(event.target.value)}
+                    />
+                    <button type="button" onClick={sendFriendRequest}>
+                      {t.friends.addAction}
+                    </button>
+                  </div>
+                  {friendStatus ? <p className="success">{friendStatus}</p> : null}
+                  {friendError ? <p className="error">{friendError}</p> : null}
+                </div>
+                <div className="community-card">
+                  <div className="panel-title">{t.friends.incoming}</div>
+                  {incomingRequests.length === 0 ? (
+                    <p className="muted">{t.friends.emptyIncoming}</p>
+                  ) : (
+                    <div className="social-list">
+                      {incomingRequests.map((item) => (
+                        <div key={item.id} className="social-item">
+                          <div>
+                            <strong>@{item.handle}</strong>
+                            <div className="social-meta">{item.display_name || "-"}</div>
+                          </div>
+                          <div className="community-inline">
+                            <button type="button" onClick={() => acceptFriendRequest(item.id)}>
+                              {t.friends.accept}
+                            </button>
+                            <button
+                              type="button"
+                              className="button-secondary"
+                              onClick={() => declineFriendRequest(item.id)}
+                            >
+                              {t.friends.decline}
+                            </button>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+                <div className="community-card">
+                  <div className="panel-title">{t.friends.outgoing}</div>
+                  {outgoingRequests.length === 0 ? (
+                    <p className="muted">{t.friends.emptyOutgoing}</p>
+                  ) : (
+                    <div className="social-list">
+                      {outgoingRequests.map((item) => (
+                        <div key={item.id} className="social-item">
+                          <div>
+                            <strong>@{item.handle}</strong>
+                            <div className="social-meta">{item.display_name || "-"}</div>
+                          </div>
+                          <span className="status-pill warn">{t.friends.pending}</span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </div>
+              <div className="panel-title">{t.friends.list}</div>
+              {friends.length === 0 ? (
+                <p className="muted">{t.friends.emptyFriends}</p>
+              ) : (
+                <div className="social-list">
+                  {friends.map((item) => (
+                    <div key={item.handle} className="social-item">
+                      <div>
+                        <strong>@{item.handle}</strong>
+                        <div className="social-meta">{item.display_name || "-"}</div>
+                      </div>
+                      <div className="community-inline">
+                        <a className="button-secondary" href={`/u/${item.handle}`}>
+                          {t.actions.open}
+                        </a>
+                        <button
+                          type="button"
+                          className="button-secondary"
+                          onClick={() => removeFriend(item.handle)}
+                        >
+                          {t.friends.remove}
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          ) : null}
+
+          {activeSection === "challenges" ? (
+            <div className="panel">
+              <div className="panel-title">{t.groups.title}</div>
             <div className="community-grid">
               <div className="community-card">
                 <div className="panel-title">{t.groups.create}</div>
@@ -935,38 +1059,40 @@ export default function CommunityPage() {
                 ))}
               </div>
             )}
-            {groupDetail ? (
-              <div className="panel group-detail">
-                <div className="panel-title">{t.groups.members}</div>
-                <div className="social-list">
-                  {groupDetail.members.map((member) => (
-                    <div key={member.handle} className="social-item">
-                      <div>
-                        <strong>@{member.handle}</strong>
-                        <div className="social-meta">{member.display_name || "-"}</div>
-                      </div>
-                      <div className="group-progress">
-                        <span>
-                          {member.progress}/{member.target}
-                        </span>
-                        <div className="progress-bar">
-                          <span
-                            style={{
-                              width: `${Math.min(100, (member.progress / member.target) * 100)}%`
-                            }}
-                          />
+              {groupDetail ? (
+                <div className="panel group-detail">
+                  <div className="panel-title">{t.groups.members}</div>
+                  <div className="social-list">
+                    {groupDetail.members.map((member) => (
+                      <div key={member.handle} className="social-item">
+                        <div>
+                          <strong>@{member.handle}</strong>
+                          <div className="social-meta">{member.display_name || "-"}</div>
+                        </div>
+                        <div className="group-progress">
+                          <span>
+                            {member.progress}/{member.target}
+                          </span>
+                          <div className="progress-bar">
+                            <span
+                              style={{
+                                width: `${Math.min(100, (member.progress / member.target) * 100)}%`
+                              }}
+                            />
+                          </div>
                         </div>
                       </div>
-                    </div>
-                  ))}
+                    ))}
+                  </div>
                 </div>
-              </div>
-            ) : null}
-          </div>
+              ) : null}
+            </div>
+          ) : null}
 
-          <div className="panel">
-            <div className="panel-title">{t.chat.title}</div>
-            <div className="chat-panel">
+          {activeSection === "chat" ? (
+            <div className="panel" data-tour="community-chat">
+              <div className="panel-title">{t.chat.title}</div>
+              <div className="chat-panel">
               <div className="chat-header">
                 <button type="button" className="button-secondary" onClick={refreshChat}>
                   {t.chat.refresh}
@@ -997,222 +1123,243 @@ export default function CommunityPage() {
                   {t.chat.send}
                 </button>
               </div>
-              {chatError ? <p className="error">{chatError}</p> : null}
+                {chatError ? <p className="error">{chatError}</p> : null}
+              </div>
             </div>
-          </div>
+          ) : null}
 
-          <div className="panel">
-            <div className="panel-title">{t.profile.title}</div>
-            <div className="community-grid">
-              <div className="community-form">
-                <label>{t.profile.handle}</label>
-                <input
-                  value={form.handle}
-                  onChange={(event) => setForm((prev) => ({ ...prev, handle: event.target.value }))}
-                />
-                <label>{t.profile.displayName}</label>
-                <input
-                  value={form.display_name}
-                  onChange={(event) =>
-                    setForm((prev) => ({ ...prev, display_name: event.target.value }))
-                  }
-                />
-                <label>{t.profile.bio}</label>
-                <textarea
-                  value={form.bio}
-                  onChange={(event) => setForm((prev) => ({ ...prev, bio: event.target.value }))}
-                />
-                <label className="checkbox-row">
+          {activeSection === "profile" ? (
+            <div className="panel" data-tour="community-profile">
+              <div className="panel-title">{t.profile.title}</div>
+              <div className="community-grid">
+                <div className="community-form">
+                  <label>{t.profile.handle}</label>
                   <input
-                    type="checkbox"
-                    checked={form.is_public}
+                    value={form.handle}
                     onChange={(event) =>
-                      setForm((prev) => ({ ...prev, is_public: event.target.checked }))
+                      setForm((prev) => ({ ...prev, handle: event.target.value }))
                     }
                   />
-                  <span>{t.profile.public}</span>
-                </label>
-                <div className="community-inline">
-                  <button type="button" onClick={saveProfile} disabled={saving}>
-                    {saving ? t.profile.saving : t.profile.save}
-                  </button>
-                  {saveStatus ? <span className="success">{saveStatus}</span> : null}
-                  {saveError ? <span className="error">{saveError}</span> : null}
+                  <label>{t.profile.displayName}</label>
+                  <input
+                    value={form.display_name}
+                    onChange={(event) =>
+                      setForm((prev) => ({ ...prev, display_name: event.target.value }))
+                    }
+                  />
+                  <label>{t.profile.bio}</label>
+                  <textarea
+                    value={form.bio}
+                    onChange={(event) =>
+                      setForm((prev) => ({ ...prev, bio: event.target.value }))
+                    }
+                  />
+                  <label className="checkbox-row">
+                    <input
+                      type="checkbox"
+                      checked={form.is_public}
+                      onChange={(event) =>
+                        setForm((prev) => ({ ...prev, is_public: event.target.checked }))
+                      }
+                    />
+                    <span>{t.profile.public}</span>
+                  </label>
+                  <div className="community-inline">
+                    <button type="button" onClick={saveProfile} disabled={saving}>
+                      {saving ? t.profile.saving : t.profile.save}
+                    </button>
+                    {saveStatus ? <span className="success">{saveStatus}</span> : null}
+                    {saveError ? <span className="error">{saveError}</span> : null}
+                  </div>
                 </div>
-              </div>
-              <div className="community-card">
-                <div className="community-stat">
-                  <div className="community-stat-label">{t.profile.followers}</div>
-                  <div className="community-stat-value">{profile.followers}</div>
-                </div>
-                <div className="community-stat">
-                  <div className="community-stat-label">{t.profile.following}</div>
-                  <div className="community-stat-value">{profile.following}</div>
-                </div>
-                <div className="community-share">
-                  <div className="panel-title">{t.profile.share}</div>
-                  <input value={shareUrl} readOnly />
-                  <button type="button" className="button-secondary" onClick={copyShare}>
-                    {t.profile.copy}
-                  </button>
+                <div className="community-card">
+                  <div className="community-stat">
+                    <div className="community-stat-label">{t.profile.followers}</div>
+                    <div className="community-stat-value">{profile.followers}</div>
+                  </div>
+                  <div className="community-stat">
+                    <div className="community-stat-label">{t.profile.following}</div>
+                    <div className="community-stat-value">{profile.following}</div>
+                  </div>
+                  <div className="community-share">
+                    <div className="panel-title">{t.profile.share}</div>
+                    <input value={shareUrl} readOnly />
+                    <button type="button" className="button-secondary" onClick={copyShare}>
+                      {t.profile.copy}
+                    </button>
+                  </div>
                 </div>
               </div>
             </div>
-          </div>
+          ) : null}
 
-          <div className="panel">
-            <div className="panel-title">{t.search.title}</div>
-            <p className="muted">{t.search.hint}</p>
-            <div className="community-inline">
-              <input
-                value={query}
-                placeholder={t.search.placeholder}
-                onChange={(event) => setQuery(event.target.value)}
-              />
-              <button type="button" onClick={runSearch} disabled={searching || query.length < 2}>
-                {t.search.action}
-              </button>
-            </div>
-            {searchError ? <p className="error">{searchError}</p> : null}
-            {!searching && query.length >= 2 && searchResults.length === 0 ? (
-              <p className="muted">{t.search.empty}</p>
-            ) : null}
-            {searchResults.length ? (
-              <div className="social-list">
-                {searchResults.map((item) => (
-                  <div key={item.handle} className="social-item">
-                    <div>
-                      <strong>@{item.handle}</strong>
-                      <div className="social-meta">{item.display_name || "-"}</div>
+          {activeSection === "friends" ? (
+            <div className="panel">
+              <div className="panel-title">{t.search.title}</div>
+              <p className="muted">{t.search.hint}</p>
+              <div className="community-inline">
+                <input
+                  value={query}
+                  placeholder={t.search.placeholder}
+                  onChange={(event) => setQuery(event.target.value)}
+                />
+                <button type="button" onClick={runSearch} disabled={searching || query.length < 2}>
+                  {t.search.action}
+                </button>
+              </div>
+              {searchError ? <p className="error">{searchError}</p> : null}
+              {!searching && query.length >= 2 && searchResults.length === 0 ? (
+                <p className="muted">{t.search.empty}</p>
+              ) : null}
+              {searchResults.length ? (
+                <div className="social-list">
+                  {searchResults.map((item) => (
+                    <div key={item.handle} className="social-item">
+                      <div>
+                        <strong>@{item.handle}</strong>
+                        <div className="social-meta">{item.display_name || "-"}</div>
+                      </div>
+                      <div className="community-inline">
+                        <a className="button-secondary" href={`/u/${item.handle}`}>
+                          {t.actions.open}
+                        </a>
+                        <button
+                          type="button"
+                          className="button-secondary"
+                          onClick={() => toggleFollow(item.handle, item.is_following)}
+                        >
+                          {item.is_following ? t.actions.unfollow : t.actions.follow}
+                        </button>
+                      </div>
                     </div>
-                    <div className="community-inline">
+                  ))}
+                </div>
+              ) : null}
+            </div>
+          ) : null}
+
+          {activeSection === "activity" ? (
+            <div className="panel">
+              <div className="panel-title">{t.leaderboard.title}</div>
+              <div className="social-list">
+                {leaderboard.map((row) => (
+                  <div key={row.handle} className="social-item">
+                    <div className="leaderboard-rank">#{row.rank}</div>
+                    <div className="leaderboard-main">
+                      <strong>@{row.handle}</strong>
+                      <div className="social-meta">{row.display_name || "-"}</div>
+                    </div>
+                    <div className="leaderboard-stats">
+                      <span>
+                        {t.leaderboard.learned}: {row.learned_7d}
+                      </span>
+                      <span>
+                        {t.leaderboard.known}: {row.known_words}
+                      </span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          ) : null}
+
+          {activeSection === "challenges" ? (
+            <div className="panel" data-tour="community-challenges">
+              <div className="panel-title">{t.challenges.title}</div>
+              <div className="community-grid">
+                <div className="social-list">
+                  {challenges.map((item) => (
+                    <div key={item.key} className="challenge-card">
+                      <div className="challenge-title">
+                        {item.title?.[lang] || item.title?.ru}
+                      </div>
+                      <div className="social-meta">
+                        {item.description?.[lang] || item.description?.ru}
+                      </div>
+                      <div className="community-inline">
+                        <span>
+                          {t.challenges.progress}: {item.target}
+                        </span>
+                        <button type="button" onClick={() => startChallenge(item.key)}>
+                          {t.challenges.start}
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+                <div className="social-list">
+                  <div className="panel-title">{t.challenges.my}</div>
+                  {myChallenges.length === 0 ? (
+                    <p className="muted">{t.search.empty}</p>
+                  ) : null}
+                  {myChallenges.map((item) => (
+                    <div key={item.id} className="challenge-card">
+                      <div className="challenge-title">
+                        {item.title?.[lang] || item.title?.ru}
+                      </div>
+                      <div className="social-meta">
+                        {item.description?.[lang] || item.description?.ru}
+                      </div>
+                      <div className="community-inline">
+                        <span className="status-pill ok">{challengeStatusLabel(item.status)}</span>
+                        <span>
+                          {item.progress}/{item.target}
+                        </span>
+                      </div>
+                      <div className="progress-bar">
+                        <span
+                          style={{
+                            width: `${Math.min(100, (item.progress / item.target) * 100)}%`
+                          }}
+                        />
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          ) : null}
+
+          {activeSection === "friends" ? (
+            <div className="panel">
+              <div className="panel-title">{t.profile.followers}</div>
+              <div className="community-grid">
+                <div className="social-list">
+                  {followers.map((item) => (
+                    <div key={item.handle} className="social-item">
+                      <div>
+                        <strong>@{item.handle}</strong>
+                        <div className="social-meta">{item.display_name || "-"}</div>
+                      </div>
                       <a className="button-secondary" href={`/u/${item.handle}`}>
                         {t.actions.open}
                       </a>
-                      <button
-                        type="button"
-                        className="button-secondary"
-                        onClick={() => toggleFollow(item.handle, item.is_following)}
-                      >
-                        {item.is_following ? t.actions.unfollow : t.actions.follow}
-                      </button>
                     </div>
-                  </div>
-                ))}
-              </div>
-            ) : null}
-          </div>
-
-          <div className="panel">
-            <div className="panel-title">{t.leaderboard.title}</div>
-            <div className="social-list">
-              {leaderboard.map((row) => (
-                <div key={row.handle} className="social-item">
-                  <div className="leaderboard-rank">#{row.rank}</div>
-                  <div className="leaderboard-main">
-                    <strong>@{row.handle}</strong>
-                    <div className="social-meta">{row.display_name || "-"}</div>
-                  </div>
-                  <div className="leaderboard-stats">
-                    <span>
-                      {t.leaderboard.learned}: {row.learned_7d}
-                    </span>
-                    <span>
-                      {t.leaderboard.known}: {row.known_words}
-                    </span>
-                  </div>
+                  ))}
                 </div>
-              ))}
-            </div>
-          </div>
-
-          <div className="panel">
-            <div className="panel-title">{t.challenges.title}</div>
-            <div className="community-grid">
-              <div className="social-list">
-                {challenges.map((item) => (
-                  <div key={item.key} className="challenge-card">
-                    <div className="challenge-title">
-                      {item.title?.[lang] || item.title?.ru}
+                <div className="social-list">
+                  <div className="panel-title">{t.profile.following}</div>
+                  {following.map((item) => (
+                    <div key={item.handle} className="social-item">
+                      <div>
+                        <strong>@{item.handle}</strong>
+                        <div className="social-meta">{item.display_name || "-"}</div>
+                      </div>
+                      <a className="button-secondary" href={`/u/${item.handle}`}>
+                        {t.actions.open}
+                      </a>
                     </div>
-                    <div className="social-meta">
-                      {item.description?.[lang] || item.description?.ru}
-                    </div>
-                    <div className="community-inline">
-                      <span>
-                        {t.challenges.progress}: {item.target}
-                      </span>
-                      <button type="button" onClick={() => startChallenge(item.key)}>
-                        {t.challenges.start}
-                      </button>
-                    </div>
-                  </div>
-                ))}
-              </div>
-              <div className="social-list">
-                <div className="panel-title">{t.challenges.my}</div>
-                {myChallenges.length === 0 ? (
-                  <p className="muted">{t.search.empty}</p>
-                ) : null}
-                {myChallenges.map((item) => (
-                  <div key={item.id} className="challenge-card">
-                    <div className="challenge-title">
-                      {item.title?.[lang] || item.title?.ru}
-                    </div>
-                    <div className="social-meta">
-                      {item.description?.[lang] || item.description?.ru}
-                    </div>
-                    <div className="community-inline">
-                      <span className="status-pill ok">{challengeStatusLabel(item.status)}</span>
-                      <span>
-                        {item.progress}/{item.target}
-                      </span>
-                    </div>
-                    <div className="progress-bar">
-                      <span
-                        style={{
-                          width: `${Math.min(100, (item.progress / item.target) * 100)}%`
-                        }}
-                      />
-                    </div>
-                  </div>
-                ))}
+                  ))}
+                </div>
               </div>
             </div>
-          </div>
-
-          <div className="panel">
-            <div className="panel-title">{t.profile.followers}</div>
-            <div className="community-grid">
-              <div className="social-list">
-                {followers.map((item) => (
-                  <div key={item.handle} className="social-item">
-                    <div>
-                      <strong>@{item.handle}</strong>
-                      <div className="social-meta">{item.display_name || "-"}</div>
-                    </div>
-                    <a className="button-secondary" href={`/u/${item.handle}`}>
-                      {t.actions.open}
-                    </a>
-                  </div>
-                ))}
-              </div>
-              <div className="social-list">
-                <div className="panel-title">{t.profile.following}</div>
-                {following.map((item) => (
-                  <div key={item.handle} className="social-item">
-                    <div>
-                      <strong>@{item.handle}</strong>
-                      <div className="social-meta">{item.display_name || "-"}</div>
-                    </div>
-                    <a className="button-secondary" href={`/u/${item.handle}`}>
-                      {t.actions.open}
-                    </a>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </div>
+          ) : null}
+          <TourOverlay
+            steps={tourSteps}
+            labels={tourLabels}
+            stage="community"
+            onStepChange={handleTourStep}
+          />
         </>
       ) : null}
     </main>

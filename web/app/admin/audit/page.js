@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 
 import { getCookie, setCookie } from "../../lib/client-cookies";
 import { useUiLang } from "../../ui-lang-context";
+import AdminNav from "../admin-nav";
 
 const API_BASE = process.env.NEXT_PUBLIC_API_BASE || "http://localhost:8000";
 
@@ -153,6 +154,7 @@ export default function AdminAuditPage() {
           </button>
         </div>
       </div>
+      <AdminNav />
 
       {loading ? <p className="muted">{t.loading}</p> : null}
       {error ? <p className="error">{error}</p> : null}

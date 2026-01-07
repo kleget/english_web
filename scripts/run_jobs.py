@@ -235,7 +235,7 @@ async def process_send_review_notifications(session, job: BackgroundJob) -> dict
 def build_report_message(report: ContentReport, corpus_name: str | None, reporter_email: str) -> tuple[str, str]:
     issue_label = ISSUE_LABELS.get(report.issue_type, report.issue_type)
     source_label = SOURCE_LABELS.get(report.source or "other", report.source or "other")
-    subject = f"[English Web] \u0420\u0435\u043f\u043e\u0440\u0442 #{report.id}: {issue_label}"
+    subject = f"[Recallio] \u0420\u0435\u043f\u043e\u0440\u0442 #{report.id}: {issue_label}"
     parts = [
         f"\u0422\u0438\u043f: {issue_label}",
         f"\u0421\u0442\u0430\u0442\u0443\u0441: {report.status}",

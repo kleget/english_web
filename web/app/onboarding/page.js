@@ -72,20 +72,14 @@ const CORPUS_NAME_MAP = {
 
 const TEXT = {
   ru: {
-    title: "Онбординг",
+    title: "Настройка обучения",
     tagline: "Настрой обучение под себя: язык, ритм и сферы.",
     loading: "Загрузка...",
-    tabs: {
-      setup: "Настройка",
-      known: "Известные слова"
-    },
     languages: {
       title: "Языки",
       hint: "Выбери направление обучения.",
       native: "Я знаю",
-      target: "Изучаю",
-      swap: "Поменять местами",
-      pair: "Направление"
+      target: "Изучаю"
     },
     settings: {
       title: "Ритм обучения",
@@ -112,7 +106,6 @@ const TEXT = {
       saved: "Настройки сохранены.",
       saveError: "Не удалось сохранить настройки",
       goHome: "На главную",
-      toImport: "Импорт известных слов",
       corporaRequired: "Нужно выбрать хотя бы одну сферу."
     },
     preview: {
@@ -127,47 +120,19 @@ const TEXT = {
       count: "Частота",
       noTranslation: "Перевод не найден"
     },
-    known: {
-      title: "Импорт известных слов",
-      hint: "Вставь список, и мы отметим слова как уже известные.",
-      format: "Формат: слово - перевод",
-      exampleTitle: "Пример",
-      example:
-        "cat - кошка\nclock - часы\nwarm - тепло\nокно - window\nмышка - mouse",
-      import: "Импортировать",
-      importing: "Импорт...",
-      back: "Назад к настройке",
-      disabled: "Сначала сохрани настройки обучения.",
-      result: "Результат импорта",
-      stats: {
-        totalLines: "Строк всего",
-        parsedLines: "Распознано строк",
-        invalidLines: "Ошибочных строк",
-        wordsFound: "Слова найдены",
-        wordsMissing: "Слова не найдены",
-        inserted: "Добавлено",
-        skipped: "Уже были"
-      }
-    },
     langRu: "Русский",
     langEn: "English",
     errorLoad: "Не удалось загрузить данные."
   },
   en: {
-    title: "Onboarding",
+    title: "Learning setup",
     tagline: "Set up your learning: language, pace, and corpora.",
     loading: "Loading...",
-    tabs: {
-      setup: "Setup",
-      known: "Known words"
-    },
     languages: {
       title: "Languages",
       hint: "Choose the learning direction.",
       native: "I know",
-      target: "Learning",
-      swap: "Swap",
-      pair: "Direction"
+      target: "Learning"
     },
     settings: {
       title: "Learning pace",
@@ -194,7 +159,6 @@ const TEXT = {
       saved: "Settings saved.",
       saveError: "Failed to save settings",
       goHome: "Home",
-      toImport: "Import known words",
       corporaRequired: "Select at least one corpus."
     },
     preview: {
@@ -208,28 +172,6 @@ const TEXT = {
       more: "Load more",
       count: "Frequency",
       noTranslation: "No translation"
-    },
-    known: {
-      title: "Import known words",
-      hint: "Paste the list and we will mark them as known.",
-      format: "Format: word - translation",
-      exampleTitle: "Example",
-      example:
-        "cat - кошка\nclock - часы\nwarm - тепло\nокно - window\nмышка - mouse",
-      import: "Import",
-      importing: "Importing...",
-      back: "Back to setup",
-      disabled: "Complete onboarding first.",
-      result: "Import results",
-      stats: {
-        totalLines: "Total lines",
-        parsedLines: "Parsed lines",
-        invalidLines: "Invalid lines",
-        wordsFound: "Words found",
-        wordsMissing: "Words missing",
-        inserted: "Inserted",
-        skipped: "Already existed"
-      }
     },
     langRu: "Russian",
     langEn: "English",
@@ -282,7 +224,7 @@ function normalizeCorpusKey(corpus) {
   if (!raw) {
     return "";
   }
-  return raw.replace(/_(ru|en)_(ru|en)$/i, "").toLowerCase();
+  return raw.replace(/_(ru?en)_(ru?en)$/i, "").toLowerCase();
 }
 
 function getCorpusLabel(corpus, uiLang) {
@@ -300,7 +242,6 @@ function clampNumber(value, minValue, maxValue) {
 }
 
 export default function OnboardingPage() {
-  const [activeTab, setActiveTab] = useState("setup");
   const { lang, setLang } = useUiLang();
   const uiLang = lang || "ru";
   const [nativeLang, setNativeLang] = useState("ru");
@@ -317,10 +258,6 @@ export default function OnboardingPage() {
   const [saveStatus, setSaveStatus] = useState("");
   const [saveError, setSaveError] = useState("");
   const [saving, setSaving] = useState(false);
-  const [importText, setImportText] = useState("");
-  const [importResult, setImportResult] = useState(null);
-  const [importError, setImportError] = useState("");
-  const [importing, setImporting] = useState(false);
   const [onboardingDone, setOnboardingDone] = useState(false);
   const [previewOpen, setPreviewOpen] = useState(false);
   const [previewCorpus, setPreviewCorpus] = useState(null);
@@ -411,10 +348,6 @@ export default function OnboardingPage() {
   }, [nativeLang, targetLang, dailyNew, dailyReview, learnBatch, selected]);
 
   useEffect(() => {
-    setImportError("");
-  }, [importText, activeTab]);
-
-  useEffect(() => {
     if (!previewOpen) {
       setPreviewWords([]);
       setPreviewError("");
@@ -448,15 +381,6 @@ export default function OnboardingPage() {
     if (safe === nativeLang) {
       setNativeLang(safe === "ru" ? "en" : "ru");
     }
-    setSelected({});
-  };
-
-  const swapLanguages = () => {
-    if (nativeLang === targetLang) {
-      return;
-    }
-    setNativeLang(targetLang);
-    setTargetLang(nativeLang);
     setSelected({});
   };
 
@@ -494,6 +418,7 @@ export default function OnboardingPage() {
       window.location.href = "/auth";
       return;
     }
+    const wasOnboarded = onboardingDone;
     const corporaPayload = Object.entries(selected).map(([id, item]) => ({
       corpus_id: Number(id),
       target_word_limit: item.target_word_limit || 0,
@@ -519,32 +444,20 @@ export default function OnboardingPage() {
       );
       setSaveStatus(t.actions.saved);
       setOnboardingDone(true);
+      if (!wasOnboarded) {
+        if (typeof window !== "undefined") {
+          window.localStorage.setItem("tour_active", "1");
+          window.localStorage.setItem("tour_step", "0");
+          window.localStorage.setItem("tour_stage", "home");
+        }
+        setTimeout(() => {
+          window.location.href = "/";
+        }, 400);
+      }
     } catch (err) {
       setSaveError(err.message || t.actions.saveError);
     } finally {
       setSaving(false);
-    }
-  };
-
-  const submitKnownWords = async () => {
-    setImportError("");
-    setImportResult(null);
-    if (!token) {
-      window.location.href = "/auth";
-      return;
-    }
-    if (!onboardingDone) {
-      setImportError(t.known.disabled);
-      return;
-    }
-    setImporting(true);
-    try {
-      const data = await postJson("/onboarding/known-words", { text: importText }, token);
-      setImportResult(data);
-    } catch (err) {
-      setImportError(err.message || "Request failed");
-    } finally {
-      setImporting(false);
     }
   };
 
@@ -600,18 +513,6 @@ export default function OnboardingPage() {
     window.location.href = "/";
   };
 
-  const statsItems = importResult
-    ? [
-        { label: t.known.stats.totalLines, value: importResult.total_lines },
-        { label: t.known.stats.parsedLines, value: importResult.parsed_lines },
-        { label: t.known.stats.invalidLines, value: importResult.invalid_lines },
-        { label: t.known.stats.wordsFound, value: importResult.words_found },
-        { label: t.known.stats.wordsMissing, value: importResult.words_missing },
-        { label: t.known.stats.inserted, value: importResult.inserted },
-        { label: t.known.stats.skipped, value: importResult.skipped_existing }
-      ]
-    : [];
-
   const previewSubtitle = previewCorpus
     ? t.preview.subtitle.replace("{limit}", previewLimit)
     : "";
@@ -633,27 +534,10 @@ export default function OnboardingPage() {
         </div>
       </div>
 
-      <div className="onboarding-tabs">
-        <button
-          type="button"
-          className={`onboarding-tab ${activeTab === "setup" ? "is-active" : ""}`}
-          onClick={() => setActiveTab("setup")}
-        >
-          {t.tabs.setup}
-        </button>
-        <button
-          type="button"
-          className={`onboarding-tab ${activeTab === "known" ? "is-active" : ""}`}
-          onClick={() => setActiveTab("known")}
-        >
-          {t.tabs.known}
-        </button>
-      </div>
-
       {loading ? <p className="muted">{t.loading}</p> : null}
       {error ? <p className="error">{error}</p> : null}
 
-      {!loading && activeTab === "setup" ? (
+      {!loading ? (
         <div className="tab-panel onboarding-shell">
           <div className="panel">
             <div className="panel-title">{t.languages.title}</div>
@@ -697,14 +581,6 @@ export default function OnboardingPage() {
                   </button>
                 </div>
               </div>
-            </div>
-            <div className="onboarding-actions">
-              <button type="button" className="button-secondary swap-button" onClick={swapLanguages}>
-                {t.languages.swap}
-              </button>
-              <span className="onboarding-hint">
-                {t.languages.pair}: {formatLang(nativeLang)} - {formatLang(targetLang)}
-              </span>
             </div>
           </div>
 
@@ -815,8 +691,12 @@ export default function OnboardingPage() {
                         className={`corpus-card ${isSelected ? "is-selected" : ""}`}
                         onClick={() => toggleCorpus(corpus.id)}
                       >
-                        {isSelected ? <span className="corpus-badge">{t.corpora.badge}</span> : null}
-                        <div className="corpus-title">{corpusLabel}</div>
+                        <div className="corpus-header">
+                          <div className="corpus-title">{corpusLabel}</div>
+                          {isSelected ? (
+                            <span className="corpus-badge">{t.corpora.badge}</span>
+                          ) : null}
+                        </div>
                         <div className="corpus-meta">
                           <span>
                             {corpus.words_total} {t.corpora.words}
@@ -872,65 +752,8 @@ export default function OnboardingPage() {
             <button type="button" onClick={applyOnboarding} disabled={saving}>
               {saving ? t.actions.saving : t.actions.save}
             </button>
-            <button
-              type="button"
-              className="button-secondary"
-              onClick={() => setActiveTab("known")}
-            >
-              {t.actions.toImport}
-            </button>
             {saveStatus ? <span className="success">{saveStatus}</span> : null}
             {saveError ? <span className="error">{saveError}</span> : null}
-          </div>
-        </div>
-      ) : null}
-
-      {!loading && activeTab === "known" ? (
-        <div className="tab-panel import-panel">
-          <div className="panel">
-            <div className="panel-title">{t.known.title}</div>
-            <p className="muted">{t.known.hint}</p>
-            {!onboardingDone ? <p className="error">{t.known.disabled}</p> : null}
-            <div className="import-sample">
-              <div className="import-sample-title">{t.known.exampleTitle}</div>
-              <pre>{t.known.example}</pre>
-              <div className="import-sample-hint">{t.known.format}</div>
-            </div>
-            <textarea
-              value={importText}
-              onChange={(event) => setImportText(event.target.value)}
-              placeholder={t.known.example}
-            />
-            <div className="onboarding-actions">
-              <button
-                type="button"
-                onClick={submitKnownWords}
-                disabled={importing || !importText.trim() || !onboardingDone}
-              >
-                {importing ? t.known.importing : t.known.import}
-              </button>
-              <button
-                type="button"
-                className="button-secondary"
-                onClick={() => setActiveTab("setup")}
-              >
-                {t.known.back}
-              </button>
-            </div>
-            {importError ? <p className="error">{importError}</p> : null}
-            {statsItems.length ? (
-              <>
-                <div className="panel-title">{t.known.result}</div>
-                <div className="import-grid">
-                  {statsItems.map((item) => (
-                    <div key={item.label} className="import-card">
-                      <div className="import-title">{item.label}</div>
-                      <div className="import-value">{item.value}</div>
-                    </div>
-                  ))}
-                </div>
-              </>
-            ) : null}
           </div>
         </div>
       ) : null}
@@ -943,7 +766,7 @@ export default function OnboardingPage() {
                 <div className="modal-title">{previewTitle}</div>
                 <div className="modal-sub">
                   {previewCorpus
-                    ? `${previewCorpus.source_lang.toUpperCase()} - ${previewCorpus.target_lang.toUpperCase()} · ${previewSubtitle}`
+                    ? `${previewCorpus.source_lang.toUpperCase()} - ${previewCorpus.target_lang.toUpperCase()} | ${previewSubtitle}`
                     : previewSubtitle}
                 </div>
               </div>

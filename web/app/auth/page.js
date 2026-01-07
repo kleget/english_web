@@ -102,7 +102,7 @@ export default function AuthPage() {
           setCookie("is_admin", me.is_admin ? "1" : "0");
         }
         if (!me.onboarding_done) {
-          window.location.href = "/onboarding";
+          window.location.href = "/welcome";
         } else {
           window.location.href = "/";
         }

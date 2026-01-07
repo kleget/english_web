@@ -53,7 +53,7 @@ const TEXT = {
     sourceTypes: {
       learn: "\u0423\u0447\u0438\u0442\u044c",
       review: "\u041f\u043e\u0432\u0442\u043e\u0440\u044f\u0442\u044c",
-      onboarding: "\u041e\u043d\u0431\u043e\u0440\u0434\u0438\u043d\u0433",
+      onboarding: "Настройка обучения",
       custom: "\u041c\u043e\u0438 \u0441\u043b\u043e\u0432\u0430",
       other: "\u0414\u0440\u0443\u0433\u043e\u0435"
     },
@@ -96,7 +96,7 @@ const TEXT = {
     sourceTypes: {
       learn: "Learn",
       review: "Review",
-      onboarding: "Onboarding",
+      onboarding: "Learning setup",
       custom: "My words",
       other: "Other"
     },

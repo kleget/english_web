@@ -25,7 +25,7 @@ class UTF8JSONResponse(JSONResponse):
 
 
 def create_app() -> FastAPI:
-    app = FastAPI(title="English Web API", version="0.1.0", default_response_class=UTF8JSONResponse)
+    app = FastAPI(title="Recallio API", version="0.1.0", default_response_class=UTF8JSONResponse)
     @app.middleware("http")
     async def audit_middleware(request: Request, call_next):
         user_id = None

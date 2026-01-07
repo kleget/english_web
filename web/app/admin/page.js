@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 
 import { getCookie, setCookie } from "../lib/client-cookies";
 import { useUiLang } from "../ui-lang-context";
+import AdminNav from "./admin-nav";
 
 const API_BASE = process.env.NEXT_PUBLIC_API_BASE || "http://localhost:8000";
 
@@ -26,7 +27,7 @@ const TEXT = {
       totalUsers: "Всего пользователей",
       activeUsers: "Активных",
       verifiedUsers: "Подтверждённых",
-      onboardedUsers: "С онбордингом",
+      onboardedUsers: "С настройкой",
       profiles: "Профилей обучения",
       corpora: "Сфер",
       reportsOpen: "Новые",
@@ -66,7 +67,7 @@ const TEXT = {
       totalUsers: "Total users",
       activeUsers: "Active",
       verifiedUsers: "Verified",
-      onboardedUsers: "Onboarded",
+      onboardedUsers: "Setup done",
       profiles: "Learning profiles",
       corpora: "Corpora",
       reportsOpen: "Open",
@@ -216,6 +217,7 @@ export default function AdminPage() {
           </button>
         </div>
       </div>
+      <AdminNav />
 
       {loading ? <p className="muted">{t.loading}</p> : null}
       {error ? <p className="error">{error}</p> : null}
@@ -225,9 +227,6 @@ export default function AdminPage() {
           <div className="panel">
             <div className="panel-header">
               <div className="panel-title">{t.blocks.users}</div>
-              <a className="panel-link" href="/admin/users">
-                {t.actions.users}
-              </a>
             </div>
             <div className="stats-grid">
               {userCards.map((item) => (
@@ -256,9 +255,6 @@ export default function AdminPage() {
           <div className="panel">
             <div className="panel-header">
               <div className="panel-title">{t.blocks.reports}</div>
-              <a className="panel-link" href="/admin/reports">
-                {t.actions.reports}
-              </a>
             </div>
             <div className="stats-grid">
               {reportCards.map((item) => (
@@ -273,9 +269,6 @@ export default function AdminPage() {
           <div className="panel">
             <div className="panel-header">
               <div className="panel-title">{t.blocks.jobs}</div>
-              <a className="panel-link" href="/tech">
-                {t.actions.tech}
-              </a>
             </div>
             <div className="stats-grid">
               {jobCards.map((item) => (
@@ -290,9 +283,6 @@ export default function AdminPage() {
           <div className="panel">
             <div className="panel-header">
               <div className="panel-title">{t.blocks.notifications}</div>
-              <a className="panel-link" href="/tech">
-                {t.actions.tech}
-              </a>
             </div>
             <div className="stats-grid">
               {notificationCards.map((item) => (
@@ -304,17 +294,6 @@ export default function AdminPage() {
             </div>
           </div>
 
-          <div className="actions">
-            <a className="button-secondary" href="/admin/users">
-              {t.actions.users}
-            </a>
-            <a className="button-secondary" href="/admin/audit">
-              {t.actions.audit}
-            </a>
-            <a className="button-secondary" href="/admin/reports">
-              {t.actions.reports}
-            </a>
-          </div>
         </>
       ) : null}
     </main>

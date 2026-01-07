@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useEffect, useState } from "react";
 
@@ -10,20 +10,20 @@ const API_BASE = process.env.NEXT_PUBLIC_API_BASE || "http://localhost:8000";
 const TEXT = {
   ru: {
     title: "Мои слова",
-    tagline: "Добавляй слова, которые хочешь изучить.",
-    hint: "Эти слова попадут в раздел «Учить».",
+    tagline: "Личный список слов, которые ты хочешь выучить.",
+    hint: "Эти слова попадут в обучение и повторение. Уже известные слова импортируются отдельно в профиле.",
     loading: "Загрузка...",
     error: "Не удалось загрузить список",
     saveError: "Не удалось добавить слово",
     saved: "Слово добавлено",
     add: "Добавить",
-    adding: "Добавляем...",
+    adding: "Добавление...",
     wordLabel: "Слово (родной язык)",
     translationLabel: "Перевод (изучаемый язык)",
-    wordPlaceholder: "Например: кот",
-    translationPlaceholder: "Например: cat",
+    wordPlaceholder: "например: dog",
+    translationPlaceholder: "например: собака",
     listTitle: "Добавленные слова",
-    empty: "Пока нет добавленных слов.",
+    empty: "Пока нет своих слов.",
     direction: "Направление",
     home: "На главную",
     edit: "Редактировать",
@@ -31,20 +31,19 @@ const TEXT = {
     cancel: "Отмена",
     save: "Сохранить",
     saving: "Сохранение...",
-    deleteConfirm: "Удалить слово?",
-    listHint: "Можно править перевод и слово.",
-    importTitle: "Импорт списком",
-    importHint: "Формат: слово - перевод, по одному на строку.",
+    deleteConfirm: "Удалить это слово?",
+    listHint: "Можно редактировать перевод и удалять слова.",
+    importTitle: "Импорт слов для изучения",
+    importHint: "Формат: слово - перевод, одна пара на строку. Эти слова попадут в обучение.",
     importExampleTitle: "Пример",
-    importExample:
-      "cat - кот\nclock - часы\nwarm - тепло\nокно - window\nмышка - mouse",
+    importExample: "dog - собака\nclock - часы\nwarm - тепло\nокно - window\nмышь - mouse",
     importAction: "Импортировать",
     importing: "Импорт...",
     importResult: "Результат импорта",
     stats: {
-      totalLines: "Строк всего",
-      parsedLines: "Распознано строк",
-      invalidLines: "Ошибочных строк",
+      totalLines: "Всего строк",
+      parsedLines: "Распознано",
+      invalidLines: "Ошибка формата",
       inserted: "Добавлено",
       updated: "Обновлено",
       skipped: "Без изменений"
@@ -54,8 +53,8 @@ const TEXT = {
   },
   en: {
     title: "My words",
-    tagline: "Add words you want to learn.",
-    hint: "These words will appear in Learn.",
+    tagline: "A personal list of words you want to learn.",
+    hint: "These words appear in learning and review. Known words are imported in Profile.",
     loading: "Loading...",
     error: "Failed to load list",
     saveError: "Failed to add word",
@@ -64,8 +63,8 @@ const TEXT = {
     adding: "Adding...",
     wordLabel: "Word (native language)",
     translationLabel: "Translation (learning language)",
-    wordPlaceholder: "e.g. кот",
-    translationPlaceholder: "e.g. cat",
+    wordPlaceholder: "e.g. dog",
+    translationPlaceholder: "e.g. собака",
     listTitle: "Added words",
     empty: "No custom words yet.",
     direction: "Direction",
@@ -77,18 +76,17 @@ const TEXT = {
     saving: "Saving...",
     deleteConfirm: "Delete this word?",
     listHint: "You can edit word and translation.",
-    importTitle: "Import list",
-    importHint: "Format: word - translation, one per line.",
+    importTitle: "Import words to learn",
+    importHint: "Format: word - translation, one per line. These words will be learned.",
     importExampleTitle: "Example",
-    importExample:
-      "cat - кот\nclock - часы\nwarm - тепло\nокно - window\nмышка - mouse",
+    importExample: "dog - собака\nclock - часы\nwarm - тепло\nокно - window\nмышь - mouse",
     importAction: "Import",
     importing: "Importing...",
     importResult: "Import result",
     stats: {
       totalLines: "Total lines",
-      parsedLines: "Parsed lines",
-      invalidLines: "Invalid lines",
+      parsedLines: "Parsed",
+      invalidLines: "Invalid",
       inserted: "Inserted",
       updated: "Updated",
       skipped: "Unchanged"
@@ -575,3 +573,4 @@ export default function CustomWordsPage() {
     </main>
   );
 }
+
