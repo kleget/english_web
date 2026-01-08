@@ -1131,28 +1131,30 @@ export default function CommunityPage() {
             <div className="panel">
               <div className="panel-title">{t.profile.title}</div>
               <div className="community-grid">
-                <div className="community-form" data-tour="community-profile-form">
-                  <label>{t.profile.handle}</label>
-                  <input
-                    value={form.handle}
-                    onChange={(event) =>
-                      setForm((prev) => ({ ...prev, handle: event.target.value }))
-                    }
-                  />
-                  <label>{t.profile.displayName}</label>
-                  <input
-                    value={form.display_name}
-                    onChange={(event) =>
-                      setForm((prev) => ({ ...prev, display_name: event.target.value }))
-                    }
-                  />
-                  <label>{t.profile.bio}</label>
-                  <textarea
-                    value={form.bio}
-                    onChange={(event) =>
-                      setForm((prev) => ({ ...prev, bio: event.target.value }))
-                    }
-                  />
+                <div className="community-form">
+                  <div className="community-form-section" data-tour="community-profile-form">
+                    <label>{t.profile.handle}</label>
+                    <input
+                      value={form.handle}
+                      onChange={(event) =>
+                        setForm((prev) => ({ ...prev, handle: event.target.value }))
+                      }
+                    />
+                    <label>{t.profile.displayName}</label>
+                    <input
+                      value={form.display_name}
+                      onChange={(event) =>
+                        setForm((prev) => ({ ...prev, display_name: event.target.value }))
+                      }
+                    />
+                    <label>{t.profile.bio}</label>
+                    <textarea
+                      value={form.bio}
+                      onChange={(event) =>
+                        setForm((prev) => ({ ...prev, bio: event.target.value }))
+                      }
+                    />
+                  </div>
                   <label className="checkbox-row">
                     <input
                       type="checkbox"
