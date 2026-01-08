@@ -900,7 +900,7 @@ export default function CommunityPage() {
             <div className="panel" data-tour="community-friends">
               <div className="panel-title">{t.friends.title}</div>
               <div className="community-grid">
-                <div className="community-card">
+                <div className="community-card community-card-compact">
                   <div className="panel-title">{t.friends.addTitle}</div>
                   <div className="community-inline">
                     <input

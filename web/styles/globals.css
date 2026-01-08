@@ -1886,6 +1886,11 @@ button[disabled] {
   gap: 12px;
 }
 
+.community-card-compact {
+  padding: 14px;
+  gap: 10px;
+}
+
 .community-inline {
   display: flex;
   gap: 10px;
@@ -1918,20 +1923,33 @@ button[disabled] {
 .community-requests {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-  gap: 12px;
+  gap: 8px;
 }
 
 .community-requests-section {
   display: grid;
-  gap: 8px;
+  gap: 6px;
 }
 
 .community-requests-title {
-  font-size: 12px;
+  font-size: 11px;
   font-weight: 600;
   color: var(--muted);
   text-transform: uppercase;
   letter-spacing: 0.04em;
+}
+
+.community-requests .muted {
+  margin: 0;
+  font-size: 12px;
+}
+
+.community-requests .social-list {
+  gap: 8px;
+}
+
+.community-requests .social-item {
+  padding: 10px 12px;
 }
 
 .social-list {
