@@ -41,9 +41,14 @@ const TEXT = {
           desc: "\u0414\u043e\u0431\u0430\u0432\u043b\u044f\u0439 \u0434\u0440\u0443\u0437\u0435\u0439 \u0438 \u0443\u043f\u0440\u0430\u0432\u043b\u044f\u0439 \u0437\u0430\u044f\u0432\u043a\u0430\u043c\u0438."
         },
         {
-          key: "community-profile",
+          key: "community-profile-form",
           title: "\u041f\u0443\u0431\u043b\u0438\u0447\u043d\u044b\u0439 \u043f\u0440\u043e\u0444\u0438\u043b\u044c",
-          desc: "\u041d\u0430\u0441\u0442\u0440\u043e\u0439 \u043d\u0438\u043a, \u043e\u043f\u0438\u0441\u0430\u043d\u0438\u0435 \u0438 \u0441\u0441\u044b\u043b\u043a\u0443 \u0434\u043b\u044f \u0448\u0435\u0440\u0438\u043d\u0433\u0430."
+          desc: "\u041d\u0430\u0441\u0442\u0440\u043e\u0439 \u043d\u0438\u043a \u0438 \u043e\u043f\u0438\u0441\u0430\u043d\u0438\u0435 \u0434\u043b\u044f \u043f\u0440\u043e\u0444\u0438\u043b\u044f."
+        },
+        {
+          key: "community-profile-stats",
+          title: "\u041f\u043e\u0434\u043f\u0438\u0441\u0447\u0438\u043a\u0438 \u0438 \u044f \u0441\u043b\u0435\u0436\u0443",
+          desc: "\u041f\u0440\u043e\u0432\u0435\u0440\u044c \u043c\u0435\u0442\u0440\u0438\u043a\u0438 \u0438 \u0441\u0441\u044b\u043b\u043a\u0443 \u0434\u043b\u044f \u0448\u0435\u0440\u0438\u043d\u0433\u0430."
         },
         {
           key: "community-chat",
@@ -178,9 +183,14 @@ const TEXT = {
           desc: "Add friends and manage requests."
         },
         {
-          key: "community-profile",
+          key: "community-profile-form",
           title: "Public profile",
-          desc: "Set up your handle, bio, and share link."
+          desc: "Set up your handle and bio."
+        },
+        {
+          key: "community-profile-stats",
+          title: "Followers & following",
+          desc: "Check your stats and share link."
         },
         {
           key: "community-chat",
@@ -340,7 +350,8 @@ export default function CommunityPage() {
     const map = {
       "community-feed": "activity",
       "community-friends": "friends",
-      "community-profile": "profile",
+      "community-profile-form": "profile",
+      "community-profile-stats": "profile",
       "community-chat": "chat",
       "community-challenges": "challenges"
     };
@@ -1117,10 +1128,10 @@ export default function CommunityPage() {
           ) : null}
 
           {activeSection === "profile" ? (
-            <div className="panel" data-tour="community-profile">
+            <div className="panel">
               <div className="panel-title">{t.profile.title}</div>
               <div className="community-grid">
-                <div className="community-form">
+                <div className="community-form" data-tour="community-profile-form">
                   <label>{t.profile.handle}</label>
                   <input
                     value={form.handle}
@@ -1160,7 +1171,7 @@ export default function CommunityPage() {
                     {saveError ? <span className="error">{saveError}</span> : null}
                   </div>
                 </div>
-                <div className="community-card">
+                <div className="community-card" data-tour="community-profile-stats">
                   <div className="community-stat">
                     <div className="community-stat-label">{t.profile.followers}</div>
                     <div className="community-stat-value">{profile.followers}</div>
