@@ -140,7 +140,6 @@ export default function TourOverlay({
       }
       const rect = element.getBoundingClientRect();
       const cardWidth = Math.min(360, window.innerWidth - margin * 2);
-      const cardHeight = 200;
       let left = rect.left;
       let top = rect.bottom + 14;
 
