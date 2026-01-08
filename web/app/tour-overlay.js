@@ -31,6 +31,7 @@ export default function TourOverlay({
   const [stepIndex, setStepIndex] = useState(0);
   const [cardStyle, setCardStyle] = useState({});
   const highlightRef = useRef(null);
+  const cardRef = useRef(null);
 
   useEffect(() => {
     if (typeof window === "undefined") {
@@ -83,11 +84,41 @@ export default function TourOverlay({
     const updatePosition = () => {
       const margin = 16;
       const isCompact = window.innerWidth <= 720 || window.innerHeight <= 640;
+      const cardHeight = cardRef.current?.offsetHeight || 220;
 
       if (isCompact) {
+        const element = highlightRef.current;
+        if (!element) {
+          setCardStyle({
+            top: "auto",
+            bottom: "16px",
+            left: "50%",
+            transform: "translateX(-50%)",
+            width: "calc(100% - 32px)",
+            maxWidth: "360px",
+            maxHeight: "60vh"
+          });
+          return;
+        }
+        const rect = element.getBoundingClientRect();
+        let top = rect.bottom + 12;
+        if (top + cardHeight > window.innerHeight - margin) {
+          top = rect.top - cardHeight - 12;
+        }
+        if (top < margin) {
+          setCardStyle({
+            top: "auto",
+            bottom: "16px",
+            left: "50%",
+            transform: "translateX(-50%)",
+            width: "calc(100% - 32px)",
+            maxWidth: "360px",
+            maxHeight: "60vh"
+          });
+          return;
+        }
         setCardStyle({
-          top: "auto",
-          bottom: "16px",
+          top: `${top}px`,
           left: "50%",
           transform: "translateX(-50%)",
           width: "calc(100% - 32px)",
@@ -123,9 +154,8 @@ export default function TourOverlay({
     };
 
     const applyHighlight = () => {
-      const isCompact = window.innerWidth <= 720 || window.innerHeight <= 640;
       const element = document.querySelector(`[data-tour="${current.key}"]`);
-      if (element && !isCompact) {
+      if (element) {
         element.classList.add("tour-highlight");
         element.scrollIntoView({ behavior: "smooth", block: "center" });
         highlightRef.current = element;
@@ -209,7 +239,7 @@ export default function TourOverlay({
 
   return (
     <div className="tour-overlay">
-      <div className="tour-card" style={cardStyle}>
+      <div className="tour-card" style={cardStyle} ref={cardRef}>
         <div className="tour-step">
           {title} - {stepLabel} {stepIndex + 1}/{steps.length}
         </div>
