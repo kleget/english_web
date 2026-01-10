@@ -111,7 +111,12 @@ async def get_dashboard(
         )
         cache = cache_result.scalar_one_or_none()
         if cache and cache.updated_at and now - cache.updated_at <= timedelta(seconds=CACHE_TTL_SECONDS):
-            return DashboardOut(**cache.data)
+            data = dict(cache.data or {})
+            data["interface_lang"] = user_profile.interface_lang
+            data["theme"] = user_profile.theme or "light"
+            data["avatar_url"] = user_profile.avatar_url
+            data["email"] = user.email
+            return DashboardOut(**data)
 
     known_stmt = (
         select(func.count())
