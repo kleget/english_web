@@ -40,6 +40,11 @@ const TEXT = {
     learningHint: "Выбор сфер, языков и лимитов доступен в настройке обучения.",
     techHint: "Уведомления, очередь и фоновые задачи.",
     helpHint: "Добро пожаловать и быстрый тур по Recallio.",
+    support: {
+      title: "Поддержка",
+      hint: "Если нужна помощь или есть вопрос, напиши в поддержку.",
+      action: "Написать в поддержку"
+    },
     actions: {
       logout: "Выйти",
       onboarding: "Открыть настройку обучения",
@@ -118,6 +123,11 @@ const TEXT = {
     learningHint: "Pick corpora, languages, and limits in learning setup.",
     techHint: "Notifications, outbox, and background jobs.",
     helpHint: "Welcome guide and quick tour of Recallio.",
+    support: {
+      title: "Support",
+      hint: "Need help or have a question? Send a support request.",
+      action: "Contact support"
+    },
     actions: {
       logout: "Log out",
       onboarding: "Open learning setup",
@@ -417,6 +427,10 @@ export default function ProfilePage() {
     window.location.href = "/welcome";
   };
 
+  const goSupport = () => {
+    window.location.href = "/support";
+  };
+
   const langLabel = (value) => {
     if (value === "ru") {
       return t.langRu;
@@ -593,6 +607,16 @@ export default function ProfilePage() {
             <div className="actions">
               <button type="button" className="button-secondary" onClick={goHelp}>
                 {t.actions.help}
+              </button>
+            </div>
+          </div>
+
+          <div className="panel">
+            <div className="panel-title">{t.support.title}</div>
+            <p className="muted">{t.support.hint}</p>
+            <div className="actions">
+              <button type="button" className="button-secondary" onClick={goSupport}>
+                {t.support.action}
               </button>
             </div>
           </div>

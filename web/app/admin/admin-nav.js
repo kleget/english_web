@@ -9,13 +9,15 @@ const TEXT = {
     overview: "Обзор",
     users: "Пользователи",
     audit: "Аудит",
-    reports: "Репорты"
+    reports: "Репорты",
+    support: "Поддержка"
   },
   en: {
     overview: "Overview",
     users: "Users",
     audit: "Audit",
-    reports: "Reports"
+    reports: "Reports",
+    support: "Support"
   }
 };
 
@@ -23,6 +25,7 @@ const NAV_ITEMS = [
   { href: "/admin", key: "overview" },
   { href: "/admin/users", key: "users" },
   { href: "/admin/reports", key: "reports" },
+  { href: "/admin/support", key: "support" },
   { href: "/admin/audit", key: "audit" }
 ];
 

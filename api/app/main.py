@@ -16,6 +16,7 @@ from app.api.social import router as social_router
 from app.api.stats import router as stats_router
 from app.api.study import router as study_router
 from app.api.tech import router as tech_router
+from app.api.support import router as support_router
 from app.core.audit import log_audit_event
 from app.core.security import decode_access_token
 
@@ -84,6 +85,7 @@ def create_app() -> FastAPI:
     app.include_router(study_router)
     app.include_router(tech_router)
     app.include_router(reports_router)
+    app.include_router(support_router)
     return app
 
 

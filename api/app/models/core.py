@@ -500,6 +500,34 @@ class ContentReport(Base):
     resolved_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
 
 
+class SupportTicket(Base):
+    __tablename__ = "support_tickets"
+    __table_args__ = (
+        Index("ix_support_tickets_status", "status"),
+        Index("ix_support_tickets_created", "created_at"),
+        Index("ix_support_tickets_user", "user_id"),
+    )
+
+    id: Mapped[int] = mapped_column(BigInteger, primary_key=True)
+    user_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True),
+        ForeignKey("users.id", ondelete="CASCADE"),
+    )
+    profile_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True),
+        ForeignKey("learning_profiles.id", ondelete="SET NULL"),
+        nullable=True,
+    )
+    category: Mapped[str | None] = mapped_column(String(32), nullable=True)
+    subject: Mapped[str] = mapped_column(String(200))
+    message: Mapped[str] = mapped_column(Text)
+    status: Mapped[str] = mapped_column(String(16), default="open")
+    admin_reply: Mapped[str | None] = mapped_column(Text, nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    closed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+
+
 class UserCustomWord(Base):
     __tablename__ = "user_custom_words"
     __table_args__ = (
