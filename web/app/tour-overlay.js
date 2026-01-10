@@ -30,6 +30,7 @@ export default function TourOverlay({
   const [active, setActive] = useState(false);
   const [stepIndex, setStepIndex] = useState(0);
   const [cardStyle, setCardStyle] = useState({});
+  const [isCompact, setIsCompact] = useState(false);
   const highlightRef = useRef(null);
   const cardRef = useRef(null);
 
@@ -52,6 +53,18 @@ export default function TourOverlay({
       setStepIndex(Math.min(nextStep, Math.max(steps.length - 1, 0)));
     }
   }, [storageKey, stepKey, stageKey, stage, steps.length]);
+
+  useEffect(() => {
+    if (typeof window === "undefined") {
+      return;
+    }
+    const update = () => {
+      setIsCompact(window.innerWidth <= 720 || window.innerHeight <= 640);
+    };
+    update();
+    window.addEventListener("resize", update);
+    return () => window.removeEventListener("resize", update);
+  }, []);
 
   useEffect(() => {
     if (!active || typeof window === "undefined") {
@@ -83,48 +96,10 @@ export default function TourOverlay({
 
     const updatePosition = () => {
       const margin = 16;
-      const isCompact = window.innerWidth <= 720 || window.innerHeight <= 640;
       const cardHeight = cardRef.current?.offsetHeight || 220;
 
       if (isCompact) {
-        const element = highlightRef.current;
-        if (!element) {
-          setCardStyle({
-            top: "auto",
-            bottom: "16px",
-            left: "50%",
-            transform: "translateX(-50%)",
-            width: "calc(100% - 32px)",
-            maxWidth: "360px",
-            maxHeight: "60vh"
-          });
-          return;
-        }
-        const rect = element.getBoundingClientRect();
-        let top = rect.bottom + 12;
-        if (top + cardHeight > window.innerHeight - margin) {
-          top = rect.top - cardHeight - 12;
-        }
-        if (top < margin) {
-          setCardStyle({
-            top: "auto",
-            bottom: "16px",
-            left: "50%",
-            transform: "translateX(-50%)",
-            width: "calc(100% - 32px)",
-            maxWidth: "360px",
-            maxHeight: "60vh"
-          });
-          return;
-        }
-        setCardStyle({
-          top: `${top}px`,
-          left: "50%",
-          transform: "translateX(-50%)",
-          width: "calc(100% - 32px)",
-          maxWidth: "360px",
-          maxHeight: "60vh"
-        });
+        setCardStyle({});
         return;
       }
 
@@ -152,6 +127,14 @@ export default function TourOverlay({
       setCardStyle({ top: `${top}px`, left: `${left}px`, maxWidth: `${cardWidth}px` });
     };
 
+    if (isCompact) {
+      updatePosition();
+      window.addEventListener("resize", updatePosition);
+      return () => {
+        window.removeEventListener("resize", updatePosition);
+      };
+    }
+
     const applyHighlight = () => {
       const element = document.querySelector(`[data-tour="${current.key}"]`);
       if (element) {
@@ -174,7 +157,7 @@ export default function TourOverlay({
         highlightRef.current.classList.remove("tour-highlight");
       }
     };
-  }, [active, stepIndex, steps, onStepChange]);
+  }, [active, stepIndex, steps, onStepChange, isCompact]);
 
   useEffect(() => {
     if (!active) {
@@ -235,15 +218,19 @@ export default function TourOverlay({
   const nextLabel = labels.next || "Next";
   const doneLabel = labels.done || "Done";
   const skipLabel = labels.skip || "Close";
+  const currentTitle =
+    isCompact && current.mobileTitle ? current.mobileTitle : current.title;
+  const currentDesc =
+    isCompact && current.mobileDesc ? current.mobileDesc : current.desc;
 
   return (
-    <div className="tour-overlay">
+    <div className={`tour-overlay${isCompact ? " is-simple" : ""}`}>
       <div className="tour-card" style={cardStyle} ref={cardRef}>
         <div className="tour-step">
           {title} - {stepLabel} {stepIndex + 1}/{steps.length}
         </div>
-        <div className="tour-title">{current.title}</div>
-        <p className="tour-desc">{current.desc}</p>
+        <div className="tour-title">{currentTitle}</div>
+        <p className="tour-desc">{currentDesc}</p>
         <div className="tour-actions">
           <button type="button" className="button-secondary" onClick={stopTour}>
             {skipLabel}

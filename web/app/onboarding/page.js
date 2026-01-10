@@ -770,6 +770,10 @@ export default function OnboardingPage() {
                       : 0;
                     const corpusLabel = getCorpusLabel(corpus, uiLang);
                     const presets = buildLimitPresets(corpus.words_total, t);
+                    const stepValue = Math.max(
+                      1,
+                      Math.round(((corpus.words_total || DEFAULT_CORPUS_LIMIT) / 20) || 1)
+                    );
                     return (
                       <div
                         key={corpus.id}
@@ -808,15 +812,44 @@ export default function OnboardingPage() {
                             onClick={(event) => event.stopPropagation()}
                           >
                             <label>{t.corpora.limit}</label>
-                            <input
-                              type="number"
-                              min="1"
-                              max={corpus.words_total}
-                              value={limitValue}
-                              onChange={(event) =>
-                                updateLimit(corpus.id, event.target.value, corpus.words_total)
-                              }
-                            />
+                            <div className="limit-stepper">
+                              <button
+                                type="button"
+                                className="button-secondary stepper-button"
+                                onClick={() =>
+                                  updateLimit(
+                                    corpus.id,
+                                    limitValue - stepValue,
+                                    corpus.words_total
+                                  )
+                                }
+                              >
+                                -
+                              </button>
+                              <input
+                                type="number"
+                                min="1"
+                                max={corpus.words_total}
+                                value={limitValue}
+                                onFocus={(event) => event.target.select()}
+                                onChange={(event) =>
+                                  updateLimit(corpus.id, event.target.value, corpus.words_total)
+                                }
+                              />
+                              <button
+                                type="button"
+                                className="button-secondary stepper-button"
+                                onClick={() =>
+                                  updateLimit(
+                                    corpus.id,
+                                    limitValue + stepValue,
+                                    corpus.words_total
+                                  )
+                                }
+                              >
+                                +
+                              </button>
+                            </div>
                             <div className="limit-presets">
                               {presets.map((preset) => (
                                 <button

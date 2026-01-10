@@ -1555,6 +1555,24 @@ button[disabled] {
   color: var(--muted);
 }
 
+.limit-stepper {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.limit-stepper input {
+  width: 96px;
+  text-align: center;
+  -moz-appearance: textfield;
+}
+
+.limit-stepper input::-webkit-outer-spin-button,
+.limit-stepper input::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
 .limit-presets {
   display: flex;
   flex-wrap: wrap;
@@ -1671,6 +1689,13 @@ button[disabled] {
   z-index: 70;
 }
 
+.tour-overlay.is-simple {
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  padding: 16px;
+}
+
 .tour-card {
   position: fixed;
   width: min(360px, 100%);
@@ -1684,6 +1709,13 @@ button[disabled] {
   max-height: 70vh;
   overflow: auto;
   -webkit-overflow-scrolling: touch;
+}
+
+.tour-overlay.is-simple .tour-card {
+  position: static;
+  width: 100%;
+  max-width: 520px;
+  max-height: 70vh;
 }
 
 .tour-step {
