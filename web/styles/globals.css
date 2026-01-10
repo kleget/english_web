@@ -1691,7 +1691,7 @@ button[disabled] {
 
 .tour-overlay.is-simple {
   display: flex;
-  align-items: flex-end;
+  align-items: center;
   justify-content: center;
   padding: 16px;
 }
@@ -1716,6 +1716,11 @@ button[disabled] {
   width: 100%;
   max-width: 520px;
   max-height: 70vh;
+}
+
+.tour-overlay.is-simple .tour-title,
+.tour-overlay.is-simple .tour-desc {
+  text-align: center;
 }
 
 .tour-step {

@@ -55,22 +55,30 @@ const TEXT = {
         {
           key: "stats",
           title: "Статистика",
-          desc: "Сколько слов выучено и сколько дней учишься."
+          desc: "Сколько слов выучено и сколько дней учишься.",
+          mobileDesc:
+            "Здесь видно общий прогресс: сколько слов ты знаешь, сколько дней учишься и дневные цели."
         },
         {
           key: "today",
           title: "Сегодня",
-          desc: "Запуск обучения и повторения на сегодня."
+          desc: "Запуск обучения и повторения на сегодня.",
+          mobileDesc:
+            "Кнопки запускают обучение и повторение на сегодня. Число рядом — сколько слов запланировано."
         },
         {
           key: "sections",
           title: "Разделы",
-          desc: "Слабые слова, свои слова и сообщения об ошибках."
+          desc: "Слабые слова, свои слова и сообщения об ошибках.",
+          mobileDesc:
+            "Быстрый доступ к слабым словам, твоим словам и репортам. Здесь же инструкция по сервису."
         },
         {
           key: "chart",
           title: "График дисциплины",
-          desc: "Рост словаря по дням."
+          desc: "Рост словаря по дням.",
+          mobileDesc:
+            "График показывает рост словарного запаса по дням, чтобы видеть дисциплину и темп."
         }
       ]
     }
@@ -121,22 +129,30 @@ const TEXT = {
         {
           key: "stats",
           title: "Stats",
-          desc: "Your progress and daily numbers."
+          desc: "Your progress and daily numbers.",
+          mobileDesc:
+            "See your overall progress: words known, days learning, and daily targets."
         },
         {
           key: "today",
           title: "Today",
-          desc: "Start today's learning or review."
+          desc: "Start today's learning or review.",
+          mobileDesc:
+            "Use these buttons to start learning and review sessions. Numbers show today's plan."
         },
         {
           key: "sections",
           title: "Sections",
-          desc: "Weak words, custom words, and reports."
+          desc: "Weak words, custom words, and reports.",
+          mobileDesc:
+            "Quick access to weak words, your custom list, and issue reports. Help is here too."
         },
         {
           key: "chart",
           title: "Discipline chart",
-          desc: "See progress over time."
+          desc: "See progress over time.",
+          mobileDesc:
+            "Track how your vocabulary grows day by day to see your consistency."
         }
       ]
     }

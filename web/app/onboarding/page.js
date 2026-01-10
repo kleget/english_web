@@ -770,10 +770,7 @@ export default function OnboardingPage() {
                       : 0;
                     const corpusLabel = getCorpusLabel(corpus, uiLang);
                     const presets = buildLimitPresets(corpus.words_total, t);
-                    const stepValue = Math.max(
-                      1,
-                      Math.round(((corpus.words_total || DEFAULT_CORPUS_LIMIT) / 20) || 1)
-                    );
+                    const stepValue = 50;
                     return (
                       <div
                         key={corpus.id}
