@@ -311,7 +311,15 @@ export default function AdminReportsPage() {
     setSavingWordId(report.id);
     try {
       const data = await patchJson(`/admin/content/words/${report.word_id}`, { lemma: value }, token);
-      updateReportState(report.id, { word_value: data.lemma, word_lang: data.lang, word_text: data.lemma });
+      updateReportState(report.id, {
+        word_id: data.id,
+        word_value: data.lemma,
+        word_lang: data.lang,
+        word_text: data.lemma
+      });
+      if (data.id !== report.word_id) {
+        await loadReports(token);
+      }
     } catch (err) {
       setError(err.message || t.error);
     } finally {
