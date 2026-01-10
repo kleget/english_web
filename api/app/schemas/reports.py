@@ -33,6 +33,12 @@ class ReportOut(BaseModel):
 class ReportAdminOut(ReportOut):
     user_id: str
     reporter_email: str
+    word_id: int | None = None
+    translation_id: int | None = None
+    word_lang: str | None = None
+    target_lang: str | None = None
+    word_value: str | None = None
+    translation_value: str | None = None
 
 
 class ReportUpdate(BaseModel):

@@ -41,6 +41,21 @@ const TEXT = {
       note: "\u0417\u0430\u043c\u0435\u0442\u043a\u0430 \u0430\u0434\u043c\u0438\u043d\u0430",
       save: "\u0421\u043e\u0445\u0440\u0430\u043d\u0438\u0442\u044c",
       saving: "\u0421\u043e\u0445\u0440\u0430\u043d\u0435\u043d\u0438\u0435...",
+      editWord: "\u041f\u0440\u0430\u0432\u043a\u0430 \u0441\u043b\u043e\u0432\u0430",
+      editTranslation: "\u041f\u0440\u0430\u0432\u043a\u0430 \u043f\u0435\u0440\u0435\u0432\u043e\u0434\u0430",
+      wordCurrent: "\u0421\u043b\u043e\u0432\u043e \u0432 \u0431\u0430\u0437\u0435",
+      translationCurrent: "\u041f\u0435\u0440\u0435\u0432\u043e\u0434 \u0432 \u0431\u0430\u0437\u0435",
+      saveWord: "\u0421\u043e\u0445\u0440\u0430\u043d\u0438\u0442\u044c \u0441\u043b\u043e\u0432\u043e",
+      saveTranslation: "\u0421\u043e\u0445\u0440\u0430\u043d\u0438\u0442\u044c \u043f\u0435\u0440\u0435\u0432\u043e\u0434",
+      deleteWord: "\u0423\u0434\u0430\u043b\u0438\u0442\u044c \u0441\u043b\u043e\u0432\u043e",
+      deleteTranslation: "\u0423\u0434\u0430\u043b\u0438\u0442\u044c \u043f\u0435\u0440\u0435\u0432\u043e\u0434",
+      confirmDeleteWord:
+        "\u0423\u0434\u0430\u043b\u0438\u0442\u044c \u0441\u043b\u043e\u0432\u043e \u0438 \u0432\u0441\u0435 \u0435\u0433\u043e \u043f\u0435\u0440\u0435\u0432\u043e\u0434\u044b \u0438\u0437 \u0431\u0430\u0437\u044b?",
+      confirmDeleteTranslation: "\u0423\u0434\u0430\u043b\u0438\u0442\u044c \u0442\u043e\u043b\u044c\u043a\u043e \u044d\u0442\u043e\u0442 \u043f\u0435\u0440\u0435\u0432\u043e\u0434?",
+      wordMissing: "\u0421\u043b\u043e\u0432\u043e \u043d\u0435 \u043d\u0430\u0439\u0434\u0435\u043d\u043e \u0432 \u0431\u0430\u0437\u0435",
+      translationMissing: "\u041f\u0435\u0440\u0435\u0432\u043e\u0434 \u043d\u0435 \u043d\u0430\u0439\u0434\u0435\u043d \u0432 \u0431\u0430\u0437\u0435",
+      updatingWord: "\u0421\u043e\u0445\u0440\u0430\u043d\u0435\u043d\u0438\u0435...",
+      updatingTranslation: "\u0421\u043e\u0445\u0440\u0430\u043d\u0435\u043d\u0438\u0435...",
       reporter: "\u041e\u0442 \u043a\u043e\u0433\u043e",
       word: "\u0421\u043b\u043e\u0432\u043e",
       translation: "\u041f\u0435\u0440\u0435\u0432\u043e\u0434",
@@ -75,6 +90,20 @@ const TEXT = {
       note: "Admin note",
       save: "Save",
       saving: "Saving...",
+      editWord: "Edit word",
+      editTranslation: "Edit translation",
+      wordCurrent: "Current word",
+      translationCurrent: "Current translation",
+      saveWord: "Save word",
+      saveTranslation: "Save translation",
+      deleteWord: "Delete word",
+      deleteTranslation: "Delete translation",
+      confirmDeleteWord: "Delete the word and all its translations?",
+      confirmDeleteTranslation: "Delete only this translation?",
+      wordMissing: "Word not found in database",
+      translationMissing: "Translation not found in database",
+      updatingWord: "Saving...",
+      updatingTranslation: "Saving...",
       reporter: "Reporter",
       word: "Word",
       translation: "Translation",
@@ -125,6 +154,27 @@ async function patchJson(path, payload, token) {
   return response.json();
 }
 
+async function deleteJson(path, token) {
+  const headers = {};
+  if (token) {
+    headers.Authorization = `Bearer ${token}`;
+  }
+  const response = await fetch(`${API_BASE}${path}`, {
+    method: "DELETE",
+    headers
+  });
+  if (!response.ok) {
+    const contentType = response.headers.get("content-type") || "";
+    if (contentType.includes("application/json")) {
+      const data = await response.json();
+      throw new Error(data.detail || "Request failed");
+    }
+    const message = await response.text();
+    throw new Error(message || "Request failed");
+  }
+  return response.json();
+}
+
 function formatDateTime(value, locale) {
   if (!value) {
     return "-";
@@ -153,6 +203,12 @@ export default function AdminReportsPage() {
   const [statusMap, setStatusMap] = useState({});
   const [noteMap, setNoteMap] = useState({});
   const [savingId, setSavingId] = useState(null);
+  const [wordMap, setWordMap] = useState({});
+  const [translationMap, setTranslationMap] = useState({});
+  const [savingWordId, setSavingWordId] = useState(null);
+  const [savingTranslationId, setSavingTranslationId] = useState(null);
+  const [deletingWordId, setDeletingWordId] = useState(null);
+  const [deletingTranslationId, setDeletingTranslationId] = useState(null);
 
   const loadReports = async (token) => {
     const data = await getJson("/reports/admin?limit=50", token);
@@ -232,6 +288,124 @@ export default function AdminReportsPage() {
     }
   };
 
+  const updateReportState = (reportId, patch) => {
+    setReports((prev) =>
+      prev.map((item) => (item.id === reportId ? { ...item, ...patch } : item))
+    );
+  };
+
+  const saveWord = async (report) => {
+    if (!report.word_id) {
+      return;
+    }
+    const token = getCookie("token");
+    if (!token) {
+      window.location.href = "/auth";
+      return;
+    }
+    const value = (wordMap[report.id] ?? report.word_value ?? report.word_text ?? "").trim();
+    if (!value) {
+      setError(t.error);
+      return;
+    }
+    setSavingWordId(report.id);
+    try {
+      const data = await patchJson(`/admin/content/words/${report.word_id}`, { lemma: value }, token);
+      updateReportState(report.id, { word_value: data.lemma, word_lang: data.lang, word_text: data.lemma });
+    } catch (err) {
+      setError(err.message || t.error);
+    } finally {
+      setSavingWordId(null);
+    }
+  };
+
+  const saveTranslation = async (report) => {
+    if (!report.translation_id) {
+      return;
+    }
+    const token = getCookie("token");
+    if (!token) {
+      window.location.href = "/auth";
+      return;
+    }
+    const value = (translationMap[report.id] ?? report.translation_value ?? report.translation_text ?? "").trim();
+    if (!value) {
+      setError(t.error);
+      return;
+    }
+    setSavingTranslationId(report.id);
+    try {
+      const data = await patchJson(
+        `/admin/content/translations/${report.translation_id}`,
+        { translation: value },
+        token
+      );
+      updateReportState(report.id, {
+        translation_value: data.translation,
+        target_lang: data.target_lang,
+        translation_text: data.translation
+      });
+    } catch (err) {
+      setError(err.message || t.error);
+    } finally {
+      setSavingTranslationId(null);
+    }
+  };
+
+  const deleteWord = async (report) => {
+    if (!report.word_id) {
+      return;
+    }
+    if (!window.confirm(t.fields.confirmDeleteWord)) {
+      return;
+    }
+    const token = getCookie("token");
+    if (!token) {
+      window.location.href = "/auth";
+      return;
+    }
+    setDeletingWordId(report.id);
+    try {
+      await deleteJson(`/admin/content/words/${report.word_id}`, token);
+      updateReportState(report.id, {
+        word_id: null,
+        translation_id: null,
+        word_value: null,
+        translation_value: null
+      });
+      setWordMap((prev) => ({ ...prev, [report.id]: "" }));
+      setTranslationMap((prev) => ({ ...prev, [report.id]: "" }));
+    } catch (err) {
+      setError(err.message || t.error);
+    } finally {
+      setDeletingWordId(null);
+    }
+  };
+
+  const deleteTranslation = async (report) => {
+    if (!report.translation_id) {
+      return;
+    }
+    if (!window.confirm(t.fields.confirmDeleteTranslation)) {
+      return;
+    }
+    const token = getCookie("token");
+    if (!token) {
+      window.location.href = "/auth";
+      return;
+    }
+    setDeletingTranslationId(report.id);
+    try {
+      await deleteJson(`/admin/content/translations/${report.translation_id}`, token);
+      updateReportState(report.id, { translation_id: null, translation_value: null });
+      setTranslationMap((prev) => ({ ...prev, [report.id]: "" }));
+    } catch (err) {
+      setError(err.message || t.error);
+    } finally {
+      setDeletingTranslationId(null);
+    }
+  };
+
   return (
     <main>
       <div className="page-header">
@@ -303,6 +477,77 @@ export default function AdminReportsPage() {
                       <button type="button" onClick={() => saveReport(item)} disabled={savingId === item.id}>
                         {savingId === item.id ? t.fields.saving : t.fields.save}
                       </button>
+                    </div>
+                    <div className="admin-edit">
+                      <div className="admin-edit-row">
+                        <div className="admin-edit-title">{t.fields.editWord}</div>
+                        {item.word_id ? (
+                          <>
+                            <label>{t.fields.wordCurrent}</label>
+                            <input
+                              value={wordMap[item.id] ?? item.word_value ?? item.word_text ?? ""}
+                              onChange={(event) =>
+                                setWordMap((prev) => ({ ...prev, [item.id]: event.target.value }))
+                              }
+                            />
+                            <div className="admin-edit-actions">
+                              <button type="button" onClick={() => saveWord(item)} disabled={savingWordId === item.id}>
+                                {savingWordId === item.id ? t.fields.updatingWord : t.fields.saveWord}
+                              </button>
+                              <button
+                                type="button"
+                                className="button-danger"
+                                onClick={() => deleteWord(item)}
+                                disabled={deletingWordId === item.id}
+                              >
+                                {t.fields.deleteWord}
+                              </button>
+                            </div>
+                          </>
+                        ) : (
+                          <p className="muted">{t.fields.wordMissing}</p>
+                        )}
+                      </div>
+                      <div className="admin-edit-row">
+                        <div className="admin-edit-title">{t.fields.editTranslation}</div>
+                        {item.translation_id ? (
+                          <>
+                            <label>{t.fields.translationCurrent}</label>
+                            <input
+                              value={
+                                translationMap[item.id] ??
+                                item.translation_value ??
+                                item.translation_text ??
+                                ""
+                              }
+                              onChange={(event) =>
+                                setTranslationMap((prev) => ({ ...prev, [item.id]: event.target.value }))
+                              }
+                            />
+                            <div className="admin-edit-actions">
+                              <button
+                                type="button"
+                                onClick={() => saveTranslation(item)}
+                                disabled={savingTranslationId === item.id}
+                              >
+                                {savingTranslationId === item.id
+                                  ? t.fields.updatingTranslation
+                                  : t.fields.saveTranslation}
+                              </button>
+                              <button
+                                type="button"
+                                className="button-danger"
+                                onClick={() => deleteTranslation(item)}
+                                disabled={deletingTranslationId === item.id}
+                              >
+                                {t.fields.deleteTranslation}
+                              </button>
+                            </div>
+                          </>
+                        ) : (
+                          <p className="muted">{t.fields.translationMissing}</p>
+                        )}
+                      </div>
                     </div>
                   </div>
                   <span className={`status-pill ${statusTone(item.status)}`}>

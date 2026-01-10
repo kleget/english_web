@@ -6,6 +6,7 @@ from fastapi.responses import JSONResponse
 
 from app.api.auth import router as auth_router
 from app.api.admin import router as admin_router
+from app.api.admin_content import router as admin_content_router
 from app.api.custom_words import router as custom_words_router
 from app.api.dashboard import router as dashboard_router
 from app.api.health import router as health_router
@@ -76,6 +77,7 @@ def create_app() -> FastAPI:
     app.include_router(health_router)
     app.include_router(auth_router)
     app.include_router(admin_router)
+    app.include_router(admin_content_router)
     app.include_router(onboarding_router)
     app.include_router(dashboard_router)
     app.include_router(custom_words_router)

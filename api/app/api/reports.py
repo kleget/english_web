@@ -49,6 +49,10 @@ def build_admin_report_out(
     report: ContentReport,
     corpus_name: str | None,
     reporter_email: str,
+    word_value: str | None,
+    word_lang: str | None,
+    translation_value: str | None,
+    target_lang: str | None,
 ) -> ReportAdminOut:
     return ReportAdminOut(
         id=report.id,
@@ -66,6 +70,12 @@ def build_admin_report_out(
         resolved_at=report.resolved_at,
         user_id=str(report.user_id),
         reporter_email=reporter_email,
+        word_id=report.word_id,
+        translation_id=report.translation_id,
+        word_lang=word_lang,
+        target_lang=target_lang,
+        word_value=word_value,
+        translation_value=translation_value,
     )
 
 
@@ -217,9 +227,19 @@ async def list_admin_reports(
             raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid status")
 
     stmt = (
-        select(ContentReport, Corpus.name, User.email)
+        select(
+            ContentReport,
+            Corpus.name,
+            User.email,
+            Word.lemma,
+            Word.lang,
+            Translation.translation,
+            Translation.target_lang,
+        )
         .join(User, User.id == ContentReport.user_id)
         .outerjoin(Corpus, Corpus.id == ContentReport.corpus_id)
+        .outerjoin(Word, Word.id == ContentReport.word_id)
+        .outerjoin(Translation, Translation.id == ContentReport.translation_id)
         .order_by(ContentReport.created_at.desc())
         .limit(limit)
     )
@@ -227,7 +247,16 @@ async def list_admin_reports(
         stmt = stmt.where(ContentReport.status == status_filter)
     result = await db.execute(stmt)
     return [
-        build_admin_report_out(row[0], row[1], row[2] or "-") for row in result.fetchall()
+        build_admin_report_out(
+            row[0],
+            row[1],
+            row[2] or "-",
+            row[3],
+            row[4],
+            row[5],
+            row[6],
+        )
+        for row in result.fetchall()
     ]
 
 
@@ -276,5 +305,27 @@ async def update_report(
     reporter = await db.get(User, report.user_id)
     if reporter:
         reporter_email = reporter.email
+    word_value = None
+    word_lang = None
+    translation_value = None
+    target_lang = None
+    if report.word_id:
+        word = await db.get(Word, report.word_id)
+        if word:
+            word_value = word.lemma
+            word_lang = word.lang
+    if report.translation_id:
+        translation = await db.get(Translation, report.translation_id)
+        if translation:
+            translation_value = translation.translation
+            target_lang = translation.target_lang
 
-    return build_admin_report_out(report, corpus_name, reporter_email)
+    return build_admin_report_out(
+        report,
+        corpus_name,
+        reporter_email,
+        word_value,
+        word_lang,
+        translation_value,
+        target_lang,
+    )
