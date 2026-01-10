@@ -71,14 +71,12 @@ def read_translations(conn: sqlite3.Connection) -> list[tuple[str, int, str]]:
     ]
 
 
-async def ensure_corpus(session, slug: str, name: str, source_lang: str, target_lang: str) -> int:
+async def ensure_corpus(session, slug: str, name: str) -> int:
     stmt = (
         insert(Corpus)
         .values(
             slug=slug,
             name=name,
-            source_lang=source_lang,
-            target_lang=target_lang,
         )
         .on_conflict_do_nothing(index_elements=["slug"])
     )
@@ -250,34 +248,29 @@ async def import_database(db_path: Path, mapping: dict) -> None:
         en_translations = {(en_word, ru_word) for ru_word, en_word, _count in pairs}
 
         async with AsyncSessionLocal() as session:
+            corpus_id = await ensure_corpus(session, slug, name)
+            await session.commit()
+
+            await session.execute(
+                delete(CorpusWordStat).where(CorpusWordStat.corpus_id == corpus_id)
+            )
+            await session.commit()
+
             for source_lang, target_lang, lemmas_set, word_counts, pair_set in (
                 ("ru", "en", ru_lemmas, ru_word_counts, ru_translations),
                 ("en", "ru", en_lemmas, en_word_counts, en_translations),
             ):
                 if not lemmas_set:
                     continue
-                if (source_lang, target_lang) == fallback_pair:
-                    pair_slug = slug
-                else:
-                    pair_slug = f"{slug}_{source_lang}_{target_lang}"
-
                 lemmas = sorted(lemmas_set)
                 translations_rows = [
                     (lemma, 0, translation) for lemma, translation in sorted(pair_set)
                 ]
 
-                corpus_id = await ensure_corpus(session, pair_slug, name, source_lang, target_lang)
-                await session.commit()
-
                 await ensure_words(session, lemmas, source_lang)
                 await session.commit()
 
                 word_id_map = await fetch_word_ids(session, lemmas, source_lang)
-
-                await session.execute(
-                    delete(CorpusWordStat).where(CorpusWordStat.corpus_id == corpus_id)
-                )
-                await session.commit()
 
                 await upsert_corpus_stats(session, corpus_id, word_counts, word_id_map)
                 await session.commit()
@@ -285,9 +278,9 @@ async def import_database(db_path: Path, mapping: dict) -> None:
                 await upsert_translations(session, translations_rows, word_id_map, target_lang)
                 await session.commit()
 
-                print(
-                    f"Imported {pair_slug}: {len(word_counts)} words, {len(translations_rows)} translations"
-                )
+            total_words = len(ru_word_counts) + len(en_word_counts)
+            total_translations = len(ru_translations) + len(en_translations)
+            print(f"Imported {slug}: {total_words} words, {total_translations} translations")
         if unknown:
             print(f"Note {slug}: {unknown} rows with unknown language direction")
     finally:

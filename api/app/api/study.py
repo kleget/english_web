@@ -546,6 +546,7 @@ async def fetch_custom_words(
             word_id=row.word_id,
             word=row.lemma,
             translation=row.translation,
+            translations=[row.translation],
             rank=None,
             count=None,
         )
@@ -555,6 +556,7 @@ async def fetch_custom_words(
 
 async def fetch_corpus_words(
     profile_id,
+    source_lang: str,
     target_lang: str,
     limit: int,
     exclude_word_ids: list[int],
@@ -581,6 +583,7 @@ async def fetch_corpus_words(
             and_(UserWord.profile_id == profile_id, UserWord.word_id == Word.id),
         )
         .where(UserCorpus.profile_id == profile_id, UserCorpus.enabled.is_(True))
+        .where(Word.lang == source_lang)
         .where(
             or_(
                 UserCorpus.target_word_limit == 0,
@@ -608,6 +611,7 @@ async def fetch_corpus_words(
                 word_id=row.word_id,
                 word=row.lemma,
                 translation=sorted(translations)[0],
+                translations=sorted(translations),
                 rank=row.rank,
                 count=row.count,
             )
@@ -629,6 +633,7 @@ async def fetch_learn_words(
     exclude_ids = [item.word_id for item in custom_words]
     corpus_words = await fetch_corpus_words(
         profile_id,
+        source_lang,
         target_lang,
         remaining,
         exclude_ids,
@@ -639,6 +644,7 @@ async def fetch_learn_words(
 
 async def fetch_review_words(
     profile_id,
+    source_lang: str,
     target_lang: str,
     limit: int,
     now: datetime,
@@ -658,6 +664,7 @@ async def fetch_review_words(
             UserWord.profile_id == profile_id,
             UserWord.next_review_at.is_not(None),
             UserWord.next_review_at <= now,
+            Word.lang == source_lang,
         )
         .order_by(UserWord.next_review_at, UserWord.word_id)
         .limit(limit)
@@ -676,6 +683,7 @@ async def fetch_review_words(
                 word_id=row.word_id,
                 word=row.lemma,
                 translation=sorted(translations)[0],
+                translations=sorted(translations),
                 learned_at=row.learned_at,
                 next_review_at=row.next_review_at,
                 stage=row.stage,
@@ -806,6 +814,7 @@ def sm2_next(
 
 async def seed_review_words(
     profile_id,
+    source_lang: str,
     limit: int,
     db: AsyncSession,
 ) -> int:
@@ -816,6 +825,7 @@ async def seed_review_words(
         .join(Word, Word.id == CorpusWordStat.word_id)
         .outerjoin(UserWord, and_(UserWord.profile_id == profile_id, UserWord.word_id == Word.id))
         .where(UserCorpus.profile_id == profile_id, UserCorpus.enabled.is_(True))
+        .where(Word.lang == source_lang)
         .where(
             or_(
                 UserCorpus.target_word_limit == 0,
@@ -1012,7 +1022,14 @@ async def start_review(
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid batch size")
 
     now = datetime.now(timezone.utc)
-    words = await fetch_review_words(profile.id, profile.target_lang, batch_size, now, db)
+    words = await fetch_review_words(
+        profile.id,
+        profile.native_lang,
+        profile.target_lang,
+        batch_size,
+        now,
+        db,
+    )
     if not words:
         return ReviewStartOut(session_id=None, words=[])
 
@@ -1173,5 +1190,5 @@ async def seed_review(
     profile, _settings = await load_profile_settings(user.id, db)
     if limit <= 0:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid limit")
-    seeded = await seed_review_words(profile.id, limit, db)
+    seeded = await seed_review_words(profile.id, profile.native_lang, limit, db)
     return ReviewSeedOut(seeded=seeded)

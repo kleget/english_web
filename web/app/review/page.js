@@ -121,6 +121,31 @@ async function postJson(path, payload, token) {
   return response.json();
 }
 
+const collectTranslations = (item) => {
+  const list = Array.isArray(item?.translations) ? item.translations : [];
+  const fallback = item?.translation ? [item.translation] : [];
+  const combined = [...list, ...fallback];
+  const seen = new Set();
+  const result = [];
+  combined.forEach((value) => {
+    const trimmed = (value || "").trim();
+    if (!trimmed) {
+      return;
+    }
+    const key = trimmed.toLowerCase();
+    if (seen.has(key)) {
+      return;
+    }
+    seen.add(key);
+    result.push(trimmed);
+  });
+  return result;
+};
+
+const getTranslationLine = (item) => collectTranslations(item).join(", ");
+
+const getPrimaryTranslation = (item) => collectTranslations(item)[0] || "";
+
 export default function ReviewPage() {
   const [loading, setLoading] = useState(true);
   const [seedLoading, setSeedLoading] = useState(false);
@@ -288,8 +313,9 @@ export default function ReviewPage() {
     if (wordItem?.word) {
       params.set("word", wordItem.word);
     }
-    if (wordItem?.translation) {
-      params.set("translation", wordItem.translation);
+    const translation = getPrimaryTranslation(wordItem);
+    if (translation) {
+      params.set("translation", translation);
     }
     if (wordItem?.word_id) {
       params.set("word_id", String(wordItem.word_id));
@@ -429,7 +455,7 @@ export default function ReviewPage() {
                         <div className="card-sub muted">{t.tapCard}</div>
                       </div>
                       <div className="flip-face flip-back">
-                        <div className="card-title">{currentCard.translation}</div>
+                        <div className="card-title">{getTranslationLine(currentCard)}</div>
                         <div className="card-sub muted">
                           {t.wordLabel}: {currentCard.word}
                         </div>

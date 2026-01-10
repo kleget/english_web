@@ -20,6 +20,8 @@ const TEXT = {
     empty: "\u0421\u043b\u043e\u0432\u0430 \u043d\u0435 \u043d\u0430\u0439\u0434\u0435\u043d\u044b.",
     filters: {
       corpus: "\u0421\u0444\u0435\u0440\u0430",
+      source: "\u042f\u0437\u044b\u043a \u0441\u043b\u043e\u0432",
+      target: "\u042f\u0437\u044b\u043a \u043f\u0435\u0440\u0435\u0432\u043e\u0434\u0430",
       query: "\u041f\u043e\u0438\u0441\u043a \u043f\u043e \u0441\u043b\u043e\u0432\u0443 \u0438\u043b\u0438 \u043f\u0435\u0440\u0435\u0432\u043e\u0434\u0443",
       search: "\u041d\u0430\u0439\u0442\u0438",
       reset: "\u0421\u0431\u0440\u043e\u0441\u0438\u0442\u044c",
@@ -27,6 +29,8 @@ const TEXT = {
       order: "\u041f\u043e\u0440\u044f\u0434\u043e\u043a",
       limit: "\u041d\u0430 \u0441\u0442\u0440\u0430\u043d\u0438\u0446\u0435"
     },
+    langRu: "\u0420\u0443\u0441\u0441\u043a\u0438\u0439",
+    langEn: "English",
     sort: {
       rank: "\u041f\u043e \u0440\u0430\u043d\u0433\u0443",
       count: "\u041f\u043e \u0447\u0430\u0441\u0442\u043e\u0442\u0435",
@@ -65,6 +69,8 @@ const TEXT = {
     empty: "No words found.",
     filters: {
       corpus: "Corpus",
+      source: "Word language",
+      target: "Translation language",
       query: "Search by word or translation",
       search: "Search",
       reset: "Reset",
@@ -72,6 +78,8 @@ const TEXT = {
       order: "Order",
       limit: "Per page"
     },
+    langRu: "Russian",
+    langEn: "English",
     sort: {
       rank: "By rank",
       count: "By frequency",
@@ -181,6 +189,8 @@ export default function AdminCorporaPage() {
   const [order, setOrder] = useState("asc");
   const [limit, setLimit] = useState(DEFAULT_LIMIT);
   const [page, setPage] = useState(0);
+  const [sourceLang, setSourceLang] = useState("ru");
+  const [targetLang, setTargetLang] = useState("en");
   const [savingWordId, setSavingWordId] = useState(null);
   const [savingTranslationId, setSavingTranslationId] = useState(null);
   const [deletingWordId, setDeletingWordId] = useState(null);
@@ -195,10 +205,20 @@ export default function AdminCorporaPage() {
       return;
     }
     setCookie("is_admin", me.is_admin ? "1" : "0");
-    const data = await getJson("/admin/content/corpora", token);
-    setCorpora(Array.isArray(data) ? data : []);
-    if (data?.length && !selectedCorpus) {
-      setSelectedCorpus(String(data[0].id));
+    const params = new URLSearchParams();
+    if (sourceLang) {
+      params.set("source_lang", sourceLang);
+    }
+    const data = await getJson(`/admin/content/corpora?${params.toString()}`, token);
+    const list = Array.isArray(data) ? data : [];
+    setCorpora(list);
+    if (list.length) {
+      const existing = list.find((item) => String(item.id) === String(selectedCorpus));
+      if (!existing) {
+        setSelectedCorpus(String(list[0].id));
+      }
+    } else if (selectedCorpus) {
+      setSelectedCorpus("");
     }
   };
 
@@ -215,7 +235,9 @@ export default function AdminCorporaPage() {
         limit: String(limit),
         offset: String(offset),
         sort,
-        order
+        order,
+        source_lang: sourceLang,
+        target_lang: targetLang
       });
       if (query) {
         params.set("query", query);
@@ -244,7 +266,7 @@ export default function AdminCorporaPage() {
         setError(message);
       })
       .finally(() => setLoading(false));
-  }, []);
+  }, [sourceLang]);
 
   useEffect(() => {
     const token = getCookie("token");
@@ -255,16 +277,18 @@ export default function AdminCorporaPage() {
     loadWords(token, selectedCorpus, page).catch((err) => {
       setError(err.message || t.error);
     });
-  }, [selectedCorpus, query, sort, order, limit, page]);
+  }, [selectedCorpus, query, sort, order, limit, page, sourceLang, targetLang]);
+
+  const langLabel = (code) => (code === "en" ? t.langEn : t.langRu);
 
   const corpusOptions = useMemo(
     () =>
       corpora.map((item) => (
         <option key={item.id} value={item.id}>
-          {item.name} ({item.source_lang.toUpperCase()} \u2192 {item.target_lang.toUpperCase()})
+          {item.name} ({sourceLang.toUpperCase()} \u2192 {targetLang.toUpperCase()})
         </option>
       )),
-    [corpora]
+    [corpora, sourceLang, targetLang]
   );
 
   const totalPages = Math.max(Math.ceil(total / limit), 1);
@@ -448,6 +472,40 @@ export default function AdminCorporaPage() {
                 }}
               >
                 {corpusOptions}
+              </select>
+            </div>
+            <div className="admin-field">
+              <label>{t.filters.source}</label>
+              <select
+                value={sourceLang}
+                onChange={(event) => {
+                  const value = event.target.value === "en" ? "en" : "ru";
+                  setSourceLang(value);
+                  if (value === targetLang) {
+                    setTargetLang(value === "ru" ? "en" : "ru");
+                  }
+                  setPage(0);
+                }}
+              >
+                <option value="ru">{langLabel("ru")}</option>
+                <option value="en">{langLabel("en")}</option>
+              </select>
+            </div>
+            <div className="admin-field">
+              <label>{t.filters.target}</label>
+              <select
+                value={targetLang}
+                onChange={(event) => {
+                  const value = event.target.value === "en" ? "en" : "ru";
+                  setTargetLang(value);
+                  if (value === sourceLang) {
+                    setSourceLang(value === "ru" ? "en" : "ru");
+                  }
+                  setPage(0);
+                }}
+              >
+                <option value="ru">{langLabel("ru")}</option>
+                <option value="en">{langLabel("en")}</option>
               </select>
             </div>
             <div className="admin-field admin-field-wide">

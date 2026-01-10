@@ -114,34 +114,36 @@ async def get_onboarding_state(
 async def preview_corpus(
     corpus_id: int,
     limit: int = 20,
+    source_lang: str | None = None,
+    target_lang: str | None = None,
     _user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ) -> CorpusPreviewOut:
     if limit < 1 or limit > 100:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid limit")
 
-    corpus_result = await db.execute(
-        select(Corpus.id, Corpus.source_lang, Corpus.target_lang).where(Corpus.id == corpus_id)
-    )
+    source_lang = normalize_lang(source_lang) if source_lang else None
+    target_lang = normalize_lang(target_lang) if target_lang else None
+    if not source_lang or not target_lang:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Language required")
+
+    corpus_result = await db.execute(select(Corpus.id).where(Corpus.id == corpus_id))
     corpus = corpus_result.first()
     if not corpus:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Corpus not found")
 
     stats_result = await db.execute(
         select(CorpusWordStat.word_id, CorpusWordStat.count, CorpusWordStat.rank)
-        .where(CorpusWordStat.corpus_id == corpus_id)
+        .select_from(CorpusWordStat)
+        .join(Word, Word.id == CorpusWordStat.word_id)
+        .where(CorpusWordStat.corpus_id == corpus_id, Word.lang == source_lang)
         .order_by(CorpusWordStat.rank.asc().nulls_last(), CorpusWordStat.count.desc())
         .limit(limit)
     )
     stats_rows = stats_result.fetchall()
     word_ids = [row.word_id for row in stats_rows]
     if not word_ids:
-        return CorpusPreviewOut(
-            corpus_id=corpus_id,
-            source_lang=corpus.source_lang,
-            target_lang=corpus.target_lang,
-            words=[],
-        )
+        return CorpusPreviewOut(corpus_id=corpus_id, words=[])
 
     word_result = await db.execute(select(Word.id, Word.lemma).where(Word.id.in_(word_ids)))
     word_map = {row.id: row.lemma for row in word_result.fetchall()}
@@ -149,7 +151,7 @@ async def preview_corpus(
     translation_result = await db.execute(
         select(Translation.word_id, Translation.translation).where(
             Translation.word_id.in_(word_ids),
-            Translation.target_lang == corpus.target_lang,
+            Translation.target_lang == target_lang,
         )
     )
     translation_map: dict[int, list[str]] = defaultdict(list)
@@ -172,12 +174,7 @@ async def preview_corpus(
         if row.word_id in word_map
     ]
 
-    return CorpusPreviewOut(
-        corpus_id=corpus_id,
-        source_lang=corpus.source_lang,
-        target_lang=corpus.target_lang,
-        words=words,
-    )
+    return CorpusPreviewOut(corpus_id=corpus_id, words=words)
 
 
 @router.get("/corpora", response_model=list[CorpusOut])
@@ -187,26 +184,23 @@ async def list_corpora(
     db: AsyncSession = Depends(get_db),
 ) -> list[CorpusOut]:
     source_lang = normalize_lang(source_lang) if source_lang else None
-    target_lang = normalize_lang(target_lang) if target_lang else None
+    _ = normalize_lang(target_lang) if target_lang else None
 
     stmt = (
         select(
             Corpus.id,
             Corpus.slug,
             Corpus.name,
-            Corpus.source_lang,
-            Corpus.target_lang,
             func.count(CorpusWordStat.word_id).label("words_total"),
         )
         .select_from(Corpus)
         .join(CorpusWordStat, CorpusWordStat.corpus_id == Corpus.id, isouter=True)
-        .group_by(Corpus.id, Corpus.slug, Corpus.name, Corpus.source_lang, Corpus.target_lang)
+        .join(Word, Word.id == CorpusWordStat.word_id, isouter=True)
+        .group_by(Corpus.id, Corpus.slug, Corpus.name)
         .order_by(Corpus.name)
     )
     if source_lang:
-        stmt = stmt.where(Corpus.source_lang == source_lang)
-    if target_lang:
-        stmt = stmt.where(Corpus.target_lang == target_lang)
+        stmt = stmt.where(Word.lang == source_lang)
 
     result = await db.execute(stmt)
     return [
@@ -214,8 +208,6 @@ async def list_corpora(
             id=row.id,
             slug=row.slug,
             name=row.name,
-            source_lang=row.source_lang,
-            target_lang=row.target_lang,
             words_total=row.words_total,
         )
         for row in result.fetchall()
@@ -241,18 +233,10 @@ async def apply_onboarding(
     if len(set(corpora_ids)) != len(corpora_ids):
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Duplicate corpus ids")
 
-    corpora_rows = await db.execute(
-        select(Corpus.id, Corpus.source_lang, Corpus.target_lang).where(Corpus.id.in_(corpora_ids))
-    )
+    corpora_rows = await db.execute(select(Corpus.id).where(Corpus.id.in_(corpora_ids)))
     corpora_map = {row.id: row for row in corpora_rows.fetchall()}
     if len(corpora_map) != len(corpora_ids):
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Unknown corpus id")
-    for corpus_id, corpus in corpora_map.items():
-        if corpus.source_lang != native_lang or corpus.target_lang != target_lang:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail=f"Corpus {corpus_id} language mismatch",
-            )
 
     profile_result = await db.execute(select(UserProfile).where(UserProfile.user_id == user.id))
     user_profile = profile_result.scalar_one_or_none()

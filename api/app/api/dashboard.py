@@ -19,6 +19,7 @@ from app.models import (
     UserProfile,
     UserSettings,
     UserWord,
+    Word,
 )
 from app.schemas.dashboard import DashboardOut, LearnedSeriesPoint
 
@@ -43,16 +44,23 @@ def build_series(counts: dict[date, int], start_date: date, days: int) -> list[L
     return series
 
 
-async def count_available_new_words(profile_id, target_lang: str, db: AsyncSession) -> int:
+async def count_available_new_words(
+    profile_id,
+    source_lang: str,
+    target_lang: str,
+    db: AsyncSession,
+) -> int:
     corpora_subq = (
         select(CorpusWordStat.word_id.label("word_id"))
         .select_from(CorpusWordStat)
         .join(UserCorpus, UserCorpus.corpus_id == CorpusWordStat.corpus_id)
+        .join(Word, Word.id == CorpusWordStat.word_id)
         .outerjoin(
             UserWord,
             and_(UserWord.profile_id == profile_id, UserWord.word_id == CorpusWordStat.word_id),
         )
         .where(UserCorpus.profile_id == profile_id, UserCorpus.enabled.is_(True))
+        .where(Word.lang == source_lang)
         .where(
             or_(
                 UserCorpus.target_word_limit == 0,
@@ -64,6 +72,7 @@ async def count_available_new_words(profile_id, target_lang: str, db: AsyncSessi
     custom_subq = (
         select(UserCustomWord.word_id.label("word_id"))
         .select_from(UserCustomWord)
+        .join(Word, Word.id == UserCustomWord.word_id)
         .outerjoin(
             UserWord,
             and_(UserWord.profile_id == profile_id, UserWord.word_id == UserCustomWord.word_id),
@@ -71,6 +80,7 @@ async def count_available_new_words(profile_id, target_lang: str, db: AsyncSessi
         .where(
             UserCustomWord.profile_id == profile_id,
             UserCustomWord.target_lang == target_lang,
+            Word.lang == source_lang,
             UserWord.word_id.is_(None),
         )
     )
@@ -121,17 +131,25 @@ async def get_dashboard(
     known_stmt = (
         select(func.count())
         .select_from(UserWord)
-        .where(UserWord.profile_id == learning_profile.id, UserWord.status.in_(KNOWN_STATUSES))
+        .join(Word, Word.id == UserWord.word_id)
+        .where(
+            UserWord.profile_id == learning_profile.id,
+            UserWord.status.in_(KNOWN_STATUSES),
+            Word.lang == learning_profile.native_lang,
+        )
     )
     known_result = await db.execute(known_stmt)
     known_words = int(known_result.scalar() or 0)
 
     due_words_subq = (
         select(UserWord.word_id)
+        .select_from(UserWord)
+        .join(Word, Word.id == UserWord.word_id)
         .where(
             UserWord.profile_id == learning_profile.id,
             UserWord.next_review_at.is_not(None),
             UserWord.next_review_at <= now,
+            Word.lang == learning_profile.native_lang,
         )
         .subquery()
     )
@@ -156,7 +174,10 @@ async def get_dashboard(
     review_available = int(review_available_result.scalar() or 0)
 
     learn_available = await count_available_new_words(
-        learning_profile.id, learning_profile.target_lang, db
+        learning_profile.id,
+        learning_profile.native_lang,
+        learning_profile.target_lang,
+        db,
     )
     learn_today = min(settings.daily_new_words, learn_available)
     review_today = min(settings.daily_review_words, review_available)
@@ -166,11 +187,13 @@ async def get_dashboard(
     series_stmt = (
         select(func.date_trunc("day", UserWord.learned_at).label("day"), func.count())
         .select_from(UserWord)
+        .join(Word, Word.id == UserWord.word_id)
         .where(
             UserWord.profile_id == learning_profile.id,
             UserWord.learned_at.is_not(None),
             UserWord.learned_at >= datetime.combine(start_date, datetime.min.time(), tzinfo=timezone.utc),
             UserWord.status.in_(KNOWN_STATUSES),
+            Word.lang == learning_profile.native_lang,
         )
         .group_by("day")
         .order_by("day")

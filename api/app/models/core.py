@@ -388,8 +388,6 @@ class Corpus(Base):
     id: Mapped[int] = mapped_column(BigInteger, primary_key=True)
     slug: Mapped[str] = mapped_column(String(64), unique=True, index=True)
     name: Mapped[str] = mapped_column(String(128))
-    source_lang: Mapped[str] = mapped_column(String(2))
-    target_lang: Mapped[str] = mapped_column(String(2))
 
 
 class UserCorpus(Base):

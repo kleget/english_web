@@ -7,6 +7,7 @@ class LearnWordOut(BaseModel):
     word_id: int
     word: str
     translation: str
+    translations: list[str] = []
     rank: int | None = None
     count: int | None = None
 
@@ -52,6 +53,7 @@ class ReviewWordOut(BaseModel):
     word_id: int
     word: str
     translation: str
+    translations: list[str] = []
     learned_at: datetime | None = None
     next_review_at: datetime | None = None
     stage: int | None = None

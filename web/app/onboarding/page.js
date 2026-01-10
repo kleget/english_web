@@ -469,7 +469,12 @@ export default function OnboardingPage() {
     setPreviewLoading(true);
     setPreviewError("");
     try {
-      const data = await getJson(`/corpora/${corpusId}/preview?limit=${limitValue}`, token);
+      const params = new URLSearchParams({
+        limit: String(limitValue),
+        source_lang: nativeLang,
+        target_lang: targetLang
+      });
+      const data = await getJson(`/corpora/${corpusId}/preview?${params.toString()}`, token);
       setPreviewWords(Array.isArray(data.words) ? data.words : []);
       setPreviewLimit(limitValue);
     } catch (err) {
@@ -517,6 +522,7 @@ export default function OnboardingPage() {
     ? t.preview.subtitle.replace("{limit}", previewLimit)
     : "";
   const previewTitle = previewCorpus ? getCorpusLabel(previewCorpus, uiLang) : t.preview.title;
+  const languagePair = `${nativeLang.toUpperCase()} - ${targetLang.toUpperCase()}`;
   const canLoadMore =
     previewWords.length >= previewLimit && previewLimit < 100 && !previewLoading;
 
@@ -702,7 +708,7 @@ export default function OnboardingPage() {
                             {corpus.words_total} {t.corpora.words}
                           </span>
                           <span>
-                            {corpus.source_lang.toUpperCase()} - {corpus.target_lang.toUpperCase()}
+                            {languagePair}
                           </span>
                         </div>
                         <div
@@ -765,9 +771,7 @@ export default function OnboardingPage() {
               <div>
                 <div className="modal-title">{previewTitle}</div>
                 <div className="modal-sub">
-                  {previewCorpus
-                    ? `${previewCorpus.source_lang.toUpperCase()} - ${previewCorpus.target_lang.toUpperCase()} | ${previewSubtitle}`
-                    : previewSubtitle}
+                  {previewCorpus ? `${languagePair} | ${previewSubtitle}` : previewSubtitle}
                 </div>
               </div>
               <button type="button" className="button-secondary modal-close" onClick={closePreview}>

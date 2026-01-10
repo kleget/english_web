@@ -42,34 +42,47 @@ def ensure_admin(user: User) -> None:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Forbidden")
 
 
+LANG_CODES = {"ru", "en"}
+
+
+def normalize_lang(value: str | None) -> str | None:
+    if value is None:
+        return None
+    normalized = value.strip().lower()
+    if normalized not in LANG_CODES:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid language")
+    return normalized
+
+
 @router.get("/corpora", response_model=list[AdminCorpusOut])
 async def list_corpora(
+    source_lang: str | None = None,
     user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ) -> list[AdminCorpusOut]:
     ensure_admin(user)
+    source_lang = normalize_lang(source_lang) if source_lang else None
     stmt = (
         select(
             Corpus.id,
             Corpus.slug,
             Corpus.name,
-            Corpus.source_lang,
-            Corpus.target_lang,
             func.count(CorpusWordStat.word_id).label("words_total"),
         )
         .select_from(Corpus)
         .join(CorpusWordStat, CorpusWordStat.corpus_id == Corpus.id, isouter=True)
-        .group_by(Corpus.id, Corpus.slug, Corpus.name, Corpus.source_lang, Corpus.target_lang)
+        .join(Word, Word.id == CorpusWordStat.word_id, isouter=True)
+        .group_by(Corpus.id, Corpus.slug, Corpus.name)
         .order_by(Corpus.name)
     )
+    if source_lang:
+        stmt = stmt.where(Word.lang == source_lang)
     result = await db.execute(stmt)
     return [
         AdminCorpusOut(
             id=row.id,
             slug=row.slug,
             name=row.name,
-            source_lang=row.source_lang,
-            target_lang=row.target_lang,
             words_total=row.words_total,
         )
         for row in result.fetchall()
@@ -84,6 +97,8 @@ async def list_corpus_words(
     offset: int = 0,
     sort: str = "rank",
     order: str | None = None,
+    source_lang: str | None = None,
+    target_lang: str | None = None,
     user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ) -> AdminCorpusWordsOut:
@@ -93,9 +108,12 @@ async def list_corpus_words(
     if offset < 0:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid offset")
 
-    corpus_result = await db.execute(
-        select(Corpus.id, Corpus.source_lang, Corpus.target_lang).where(Corpus.id == corpus_id)
-    )
+    source_lang = normalize_lang(source_lang) if source_lang else None
+    target_lang = normalize_lang(target_lang) if target_lang else None
+    if not source_lang or not target_lang:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Language required")
+
+    corpus_result = await db.execute(select(Corpus.id).where(Corpus.id == corpus_id))
     corpus = corpus_result.first()
     if not corpus:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Corpus not found")
@@ -110,7 +128,7 @@ async def list_corpus_words(
         )
         .select_from(CorpusWordStat)
         .join(Word, Word.id == CorpusWordStat.word_id)
-        .where(CorpusWordStat.corpus_id == corpus_id)
+        .where(CorpusWordStat.corpus_id == corpus_id, Word.lang == source_lang)
     )
 
     if query and query.strip():
@@ -118,7 +136,7 @@ async def list_corpus_words(
         translation_match = exists(
             select(1).where(
                 Translation.word_id == Word.id,
-                Translation.target_lang == corpus.target_lang,
+                Translation.target_lang == target_lang,
                 Translation.translation.ilike(like),
             )
         )
@@ -153,10 +171,10 @@ async def list_corpus_words(
         return AdminCorpusWordsOut(total=total_count, items=[])
 
     translations_result = await db.execute(
-        select(Translation.id, Translation.word_id, Translation.translation, Translation.target_lang)
+        select(Translation.id, Translation.word_id, Translation.translation)
         .where(
             Translation.word_id.in_(word_ids),
-            Translation.target_lang == corpus.target_lang,
+            Translation.target_lang == target_lang,
         )
         .order_by(Translation.translation.asc())
     )
@@ -166,7 +184,6 @@ async def list_corpus_words(
             {
                 "id": row.id,
                 "translation": row.translation,
-                "target_lang": row.target_lang,
             }
         )
 

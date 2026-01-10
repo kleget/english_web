@@ -5,15 +5,12 @@ class AdminCorpusOut(BaseModel):
     id: int
     slug: str
     name: str
-    source_lang: str
-    target_lang: str
     words_total: int
 
 
 class AdminCorpusTranslationOut(BaseModel):
     id: int
     translation: str
-    target_lang: str
 
 
 class AdminCorpusWordOut(BaseModel):
