@@ -10,7 +10,16 @@ from app.api.auth import get_active_learning_profile, get_current_user
 from app.core.audit import log_audit_event
 from app.core.config import ADMIN_EMAILS, ADMIN_TELEGRAM_CHAT_IDS
 from app.db.session import get_db
-from app.models import BackgroundJob, ContentReport, Corpus, Translation, User, Word
+from app.models import (
+    BackgroundJob,
+    ContentReport,
+    Corpus,
+    CorpusWordStat,
+    Translation,
+    User,
+    UserCorpus,
+    Word,
+)
 from app.schemas.reports import ReportAdminOut, ReportCreate, ReportOut, ReportUpdate
 
 router = APIRouter(prefix="/reports", tags=["reports"])
@@ -53,6 +62,7 @@ def build_admin_report_out(
     word_lang: str | None,
     translation_value: str | None,
     target_lang: str | None,
+    translation_id: int | None = None,
 ) -> ReportAdminOut:
     return ReportAdminOut(
         id=report.id,
@@ -71,7 +81,7 @@ def build_admin_report_out(
         user_id=str(report.user_id),
         reporter_email=reporter_email,
         word_id=report.word_id,
-        translation_id=report.translation_id,
+        translation_id=translation_id if translation_id is not None else report.translation_id,
         word_lang=word_lang,
         target_lang=target_lang,
         word_value=word_value,
@@ -115,6 +125,66 @@ async def ensure_corpus(corpus_id: int, db: AsyncSession) -> None:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Corpus not found")
 
 
+async def resolve_translation(
+    word_id: int,
+    translation_text: str,
+    target_lang: str | None,
+    db: AsyncSession,
+) -> Translation | None:
+    stmt = select(Translation).where(
+        Translation.word_id == word_id,
+        Translation.translation == translation_text,
+    )
+    if target_lang:
+        stmt = stmt.where(Translation.target_lang == target_lang)
+    result = await db.execute(stmt)
+    translation = result.scalar_one_or_none()
+    if translation:
+        return translation
+    if target_lang:
+        fallback = await db.execute(
+            select(Translation).where(
+                Translation.word_id == word_id,
+                Translation.target_lang == target_lang,
+            )
+        )
+        return fallback.scalars().first()
+    return None
+
+
+async def resolve_corpus_id(
+    word_id: int,
+    profile_id,
+    db: AsyncSession,
+) -> int | None:
+    if profile_id is not None:
+        stmt = (
+            select(CorpusWordStat.corpus_id)
+            .select_from(CorpusWordStat)
+            .join(UserCorpus, UserCorpus.corpus_id == CorpusWordStat.corpus_id)
+            .where(
+                UserCorpus.profile_id == profile_id,
+                UserCorpus.enabled.is_(True),
+                CorpusWordStat.word_id == word_id,
+            )
+            .order_by(CorpusWordStat.rank.asc().nulls_last(), CorpusWordStat.count.desc())
+            .limit(1)
+        )
+        result = await db.execute(stmt)
+        corpus_id = result.scalar_one_or_none()
+        if corpus_id:
+            return corpus_id
+
+    stmt = (
+        select(CorpusWordStat.corpus_id)
+        .where(CorpusWordStat.word_id == word_id)
+        .order_by(CorpusWordStat.count.desc())
+        .limit(1)
+    )
+    result = await db.execute(stmt)
+    return result.scalar_one_or_none()
+
+
 @router.post("", response_model=ReportOut)
 async def create_report(
     data: ReportCreate,
@@ -147,12 +217,29 @@ async def create_report(
     if source and source not in SOURCE_TYPES:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid source")
 
+    word_id = data.word_id
+    corpus_id = data.corpus_id
+    translation_id = data.translation_id
+    translation_text = data.translation_text.strip() if data.translation_text else None
+    if word_id is not None and translation_id is None and translation_text:
+        translation = await resolve_translation(
+            word_id,
+            translation_text,
+            profile.target_lang if profile else None,
+            db,
+        )
+        if translation:
+            translation_id = translation.id
+
+    if word_id is not None and corpus_id is None:
+        corpus_id = await resolve_corpus_id(word_id, profile_id, db)
+
     report = ContentReport(
         user_id=user.id,
         profile_id=profile_id,
-        corpus_id=data.corpus_id,
+        corpus_id=corpus_id,
         word_id=data.word_id,
-        translation_id=data.translation_id,
+        translation_id=translation_id,
         issue_type=issue_type,
         status="open",
         source=source,
@@ -246,18 +333,40 @@ async def list_admin_reports(
     if status_filter:
         stmt = stmt.where(ContentReport.status == status_filter)
     result = await db.execute(stmt)
-    return [
-        build_admin_report_out(
-            row[0],
-            row[1],
-            row[2] or "-",
-            row[3],
-            row[4],
-            row[5],
-            row[6],
+    items: list[ReportAdminOut] = []
+    for row in result.fetchall():
+        report = row[0]
+        corpus_name = row[1]
+        reporter_email = row[2] or "-"
+        word_value = row[3]
+        word_lang = row[4]
+        translation_value = row[5]
+        target_lang = row[6]
+        translation_id = report.translation_id
+        if translation_id is None and report.word_id and report.translation_text:
+            translation = await resolve_translation(
+                report.word_id,
+                report.translation_text,
+                None,
+                db,
+            )
+            if translation:
+                translation_id = translation.id
+                translation_value = translation.translation
+                target_lang = translation.target_lang
+        items.append(
+            build_admin_report_out(
+                report,
+                corpus_name,
+                reporter_email,
+                word_value,
+                word_lang,
+                translation_value,
+                target_lang,
+                translation_id,
+            )
         )
-        for row in result.fetchall()
-    ]
+    return items
 
 
 @router.patch("/admin/{report_id}", response_model=ReportAdminOut)
@@ -320,6 +429,19 @@ async def update_report(
             translation_value = translation.translation
             target_lang = translation.target_lang
 
+    translation_id = report.translation_id
+    if translation_id is None and report.word_id and report.translation_text:
+        translation = await resolve_translation(
+            report.word_id,
+            report.translation_text,
+            None,
+            db,
+        )
+        if translation:
+            translation_id = translation.id
+            translation_value = translation.translation
+            target_lang = translation.target_lang
+
     return build_admin_report_out(
         report,
         corpus_name,
@@ -328,4 +450,5 @@ async def update_report(
         word_lang,
         translation_value,
         target_lang,
+        translation_id,
     )

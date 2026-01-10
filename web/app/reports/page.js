@@ -27,6 +27,7 @@ const TEXT = {
     word: "\u0421\u043b\u043e\u0432\u043e",
     translation: "\u041f\u0435\u0440\u0435\u0432\u043e\u0434",
     corpus: "\u0421\u0444\u0435\u0440\u0430 (\u043e\u043f\u0446\u0438\u043e\u043d\u0430\u043b\u044c\u043d\u043e)",
+    corpusAuto: "\u041e\u043f\u0440\u0435\u0434\u0435\u043b\u0438\u0442\u0441\u044f \u0430\u0432\u0442\u043e\u043c\u0430\u0442\u0438\u0447\u0435\u0441\u043a\u0438",
     source: "\u0413\u0434\u0435 \u043d\u0430\u0448\u043b\u0438",
     message: "\u041a\u043e\u043c\u043c\u0435\u043d\u0442\u0430\u0440\u0438\u0439",
     messageHint: "\u041e\u043f\u0438\u0448\u0438 \u043e\u0448\u0438\u0431\u043a\u0443 \u0438\u043b\u0438 \u043f\u0440\u0435\u0434\u043b\u043e\u0436\u0438 \u0438\u0441\u043f\u0440\u0430\u0432\u043b\u0435\u043d\u0438\u0435.",
@@ -70,6 +71,7 @@ const TEXT = {
     word: "Word",
     translation: "Translation",
     corpus: "Corpus (optional)",
+    corpusAuto: "Auto-detected",
     source: "Where did you see it?",
     message: "Comment",
     messageHint: "Describe the issue or suggest a fix.",
@@ -182,9 +184,11 @@ export default function ReportsPage() {
     message: "",
     corpus_id: "",
     source: "other",
-    word_id: ""
+    word_id: "",
+    translation_id: ""
   });
   const [prefillDone, setPrefillDone] = useState(false);
+  const autoCorpus = Boolean(form.word_id);
 
   const loadReports = async (token) => {
     const data = await getJson("/reports?limit=20", token);
@@ -224,13 +228,17 @@ export default function ReportsPage() {
     const translation = searchParams.get("translation") || "";
     const source = searchParams.get("source") || "";
     const wordId = searchParams.get("word_id") || "";
+    const translationId = searchParams.get("translation_id") || "";
+    const corpusId = searchParams.get("corpus_id") || "";
     if (word || translation || source || wordId) {
       setForm((prev) => ({
         ...prev,
         word_text: word || prev.word_text,
         translation_text: translation || prev.translation_text,
         source: SOURCE_KEYS.includes(source) ? source : prev.source,
-        word_id: wordId || prev.word_id
+        word_id: wordId || prev.word_id,
+        translation_id: translationId || prev.translation_id,
+        corpus_id: corpusId || prev.corpus_id
       }));
     }
     setPrefillDone(true);
@@ -246,7 +254,8 @@ export default function ReportsPage() {
     form.message,
     form.corpus_id,
     form.source,
-    form.word_id
+    form.word_id,
+    form.translation_id
   ]);
 
   const issueOptions = useMemo(
@@ -291,7 +300,10 @@ export default function ReportsPage() {
         message: form.message.trim() || null,
         corpus_id: form.corpus_id ? Number(form.corpus_id) : null,
         source: form.source || "other",
-        word_id: Number.isFinite(wordId) ? wordId : null
+        word_id: Number.isFinite(wordId) ? wordId : null,
+        translation_id: Number.isFinite(Number(form.translation_id))
+          ? Number(form.translation_id)
+          : null
       };
       const data = await postJson("/reports", payload, token);
       setReports((prev) => [data, ...prev]);
@@ -387,18 +399,29 @@ export default function ReportsPage() {
                 />
               </div>
               <div className="profile-cell">
-                <label>{t.corpus}</label>
-                <select
-                  value={form.corpus_id}
-                  onChange={(event) => setForm((prev) => ({ ...prev, corpus_id: event.target.value }))}
-                >
-                  <option value="">-</option>
-                  {corpora.map((item) => (
-                    <option key={item.id} value={item.id}>
-                      {item.name}
-                    </option>
-                  ))}
-                </select>
+                {!autoCorpus ? (
+                  <>
+                    <label>{t.corpus}</label>
+                    <select
+                      value={form.corpus_id}
+                      onChange={(event) =>
+                        setForm((prev) => ({ ...prev, corpus_id: event.target.value }))
+                      }
+                    >
+                      <option value="">-</option>
+                      {corpora.map((item) => (
+                        <option key={item.id} value={item.id}>
+                          {item.name}
+                        </option>
+                      ))}
+                    </select>
+                  </>
+                ) : (
+                  <>
+                    <label>{t.corpus}</label>
+                    <div className="muted">{t.corpusAuto}</div>
+                  </>
+                )}
               </div>
               <div className="profile-cell report-full">
                 <label>{t.message}</label>
