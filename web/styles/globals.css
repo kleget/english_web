@@ -169,6 +169,10 @@ body {
   flex-wrap: wrap;
 }
 
+.nav-links-mobile {
+  display: none;
+}
+
 .nav-link {
   padding: 8px 12px;
   border-radius: 999px;
@@ -1205,7 +1209,12 @@ button[disabled] {
     grid-area: brand;
   }
 
-  .nav-links {
+  .nav-links-top {
+    display: none;
+  }
+
+  .nav-links-mobile {
+    display: flex;
     position: fixed;
     left: 0;
     right: 0;
@@ -1267,21 +1276,6 @@ button[disabled] {
 
   main {
     padding: 36px 16px 60px;
-  }
-
-  .nav-links {
-    display: flex;
-    grid-template-columns: none;
-    position: fixed;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    top: auto;
-    width: auto;
-    flex-wrap: nowrap;
-    justify-content: space-between;
-    gap: 8px;
-    overflow-x: visible;
   }
 
   .nav-link {

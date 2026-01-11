@@ -166,7 +166,7 @@ export default function SiteNav({ initialIsAdmin = false }) {
           <img className="brand-mark" src="/brand/R_main.png" alt="Recallio" />
         </a>
         <div className="nav-actions">
-          <nav className="nav-links" aria-label="Main">
+          <nav className="nav-links nav-links-top" aria-label="Main">
             {items.map((item) => {
               const isActive =
                 item.href === "/"
@@ -219,5 +219,25 @@ export default function SiteNav({ initialIsAdmin = false }) {
         </div>
       </div>
     </header>
+    <nav className="nav-links nav-links-mobile" aria-label="Main">
+      {items.map((item) => {
+        const isActive =
+          item.href === "/"
+            ? pathname === "/"
+            : pathname === item.href || pathname.startsWith(`${item.href}/`);
+        return (
+          <a
+            key={item.href}
+            href={item.href}
+            className={`nav-link${isActive ? " is-active" : ""}`}
+            aria-current={isActive ? "page" : undefined}
+            aria-label={t[item.key]}
+          >
+            <span className="nav-icon">{ICONS[item.icon]}</span>
+            <span className="nav-text">{t[item.key]}</span>
+          </a>
+        );
+      })}
+    </nav>
   );
 }
