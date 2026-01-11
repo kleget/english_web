@@ -455,6 +455,66 @@ main {
   flex-wrap: wrap;
 }
 
+.site-footer {
+  margin-top: 40px;
+  border-top: 1px solid var(--border);
+  background: var(--surface);
+  padding: 28px 20px calc(32px + env(safe-area-inset-bottom));
+}
+
+.site-footer-inner {
+  max-width: 980px;
+  margin: 0 auto;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 18px;
+  align-items: start;
+}
+
+.footer-title {
+  font-weight: 700;
+  font-size: 18px;
+  margin-bottom: 6px;
+}
+
+.footer-desc {
+  margin: 0 0 8px;
+  color: var(--muted);
+}
+
+.footer-meta {
+  margin: 0;
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.footer-links-title {
+  font-weight: 600;
+  margin-bottom: 8px;
+}
+
+.footer-links-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px 14px;
+}
+
+.footer-links-list a {
+  color: var(--text);
+  text-decoration: none;
+  font-weight: 600;
+}
+
+.footer-links-list a:hover {
+  color: var(--accent);
+}
+
+.footer-rights {
+  margin-top: 10px;
+  color: var(--muted);
+  font-size: 12px;
+}
+
 h1,
 h2,
 h3 {
@@ -1185,6 +1245,10 @@ button[disabled] {
   }
 
   .landing-hero-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .site-footer-inner {
     grid-template-columns: 1fr;
   }
 }
