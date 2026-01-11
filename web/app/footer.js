@@ -9,6 +9,7 @@ const TEXT = {
       "Изучение слов без перегруза: карточки, тесты и повторения по уму.",
     developer: "Разработчик: Kleget",
     contacts: "Контакты разработчика",
+    server: "О сервере",
     telegram: "Telegram",
     email: "Email",
     vk: "VK",
@@ -20,6 +21,7 @@ const TEXT = {
       "Learn words without overload: cards, recall tests, and smart reviews.",
     developer: "Developer: Kleget",
     contacts: "Developer contacts",
+    server: "Server info",
     telegram: "Telegram",
     email: "Email",
     vk: "VK",
@@ -44,6 +46,7 @@ export default function Footer() {
         <div className="footer-links">
           <div className="footer-links-title">{t.contacts}</div>
           <div className="footer-links-list">
+            <a href="/server">{t.server}</a>
             <a href="https://t.me/kleget" target="_blank" rel="noopener noreferrer">
               {t.telegram}
             </a>
